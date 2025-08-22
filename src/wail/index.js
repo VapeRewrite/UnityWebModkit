@@ -75,9 +75,7 @@ const valueTypeStr = {
   block: VALUE_TYPE_BLOCK,
 };
 
-Object.entries(valueTypeStr).forEach(
-  ([str, code]) => (valueTypeStr[code] = str),
-);
+Object.entries(valueTypeStr).forEach(([str, code]) => (valueTypeStr[code] = str));
 
 const convertValueType = function (string) {
   const typeVal = valueTypeStr[string];
@@ -615,12 +613,7 @@ const Uint8ToArray = function (x) {
 };
 
 const Uint32ToArray = function (x) {
-  return [
-    x & 0x000000ff,
-    (x & 0x0000ff00) >> 8,
-    (x & 0x00ff0000) >> 16,
-    (x & 0xff000000) >> 24,
-  ];
+  return [x & 0x000000ff, (x & 0x0000ff00) >> 8, (x & 0x00ff0000) >> 16, (x & 0xff000000) >> 24];
 };
 
 const Uint64ToArray = function (x) {
@@ -887,16 +880,7 @@ export const BufferReader = class {
     const b7 = this.inBuffer[this.inPos++];
     const b8 = this.inBuffer[this.inPos++];
 
-    return (
-      b1 |
-      (b2 << 8) |
-      (b3 << 16) |
-      (b4 << 24) |
-      (b5 << 32) |
-      (b6 << 40) |
-      (b7 << 48) |
-      (b8 << 56)
-    );
+    return b1 | (b2 << 8) | (b3 << 16) | (b4 << 24) | (b5 << 32) | (b6 << 40) | (b7 << 48) | (b8 << 56);
   }
 
   readUint128() {
@@ -1227,12 +1211,7 @@ export class WailParser extends BufferReader {
 
         // Mutable imported globals is not supported by all browsers, but
         // we allow it regardless.
-        if (
-          options.mutability === 0 ||
-          options.mutability === 1 ||
-          options.mutability === true ||
-          options.mutability === false
-        ) {
+        if (options.mutability === 0 || options.mutability === 1 || options.mutability === true || options.mutability === false) {
           newEntry.mutability = options.mutability;
         } else {
           throw new Error("Invalid mutability");
@@ -1414,9 +1393,7 @@ export class WailParser extends BufferReader {
     if (typeof options.globalType.contentType === "number") {
       newEntry.globalType.contentType = options.globalType.contentType;
     } else {
-      newEntry.globalType.contentType = convertValueType(
-        options.globalType.contentType,
-      );
+      newEntry.globalType.contentType = convertValueType(options.globalType.contentType);
     }
 
     const mutability = options.globalType.mutability;
@@ -1452,10 +1429,7 @@ export class WailParser extends BufferReader {
     const savedEntry = {};
 
     if (typeof globalIndex === "number") {
-      console.warn(
-        "Using raw indexes in editGlobalEntry() can have unpredictable " +
-          "results. Consider using getGlobalIndex() instead",
-      );
+      console.warn("Using raw indexes in editGlobalEntry() can have unpredictable " + "results. Consider using getGlobalIndex() instead");
     } else if (!(globalIndex instanceof WailVariable)) {
       throw new Error("Invalid globalIndex in addCodeEntry()");
     }
@@ -1471,9 +1445,7 @@ export class WailParser extends BufferReader {
     if (typeof options.globalType.contentType === "number") {
       savedEntry.globalType.contentType = options.globalType.contentType;
     } else {
-      savedEntry.globalType.contentType = convertValueType(
-        options.globalType.contentType,
-      );
+      savedEntry.globalType.contentType = convertValueType(options.globalType.contentType);
     }
 
     const mutability = options.globalType.mutability;
@@ -1523,10 +1495,7 @@ export class WailParser extends BufferReader {
   addExportEntry(index, options) {
     const newEntry = {};
 
-    if (
-      typeof options.fieldStr == "string" ||
-      options.fieldStr instanceof String
-    ) {
+    if (typeof options.fieldStr == "string" || options.fieldStr instanceof String) {
       newEntry.fieldStr = options.fieldStr;
     } else {
       throw new Error("Invalid fieldStr");
@@ -1649,10 +1618,7 @@ export class WailParser extends BufferReader {
     const newEntry = {};
 
     if (typeof funcIndex === "number") {
-      console.warn(
-        "Using raw indexes in addCodeEntry() can have unpredictable " +
-          "results. Consider using getFunctionIndex() instead",
-      );
+      console.warn("Using raw indexes in addCodeEntry() can have unpredictable " + "results. Consider using getFunctionIndex() instead");
     } else if (!(funcIndex instanceof WailVariable)) {
       throw new Error("Invalid funcIndex in addCodeEntry()");
     }
@@ -1704,10 +1670,7 @@ export class WailParser extends BufferReader {
     const savedEntry = {};
 
     if (typeof funcIndex === "number") {
-      console.warn(
-        "Using raw indexes in editCodeEntry() can have unpredictable " +
-          "results. Consider using getFunctionIndex() instead",
-      );
+      console.warn("Using raw indexes in editCodeEntry() can have unpredictable " + "results. Consider using getFunctionIndex() instead");
     } else if (!(funcIndex instanceof WailVariable)) {
       throw new Error("Invalid funcIndex in addCodeEntry()");
     }
@@ -1887,9 +1850,7 @@ export class WailParser extends BufferReader {
     const id = this.readUint8();
 
     if (id > MAX_SECTION_ID) {
-      throw new Error(
-        "Illegal section ID " + id + ". Probably parsing incorrectly",
-      );
+      throw new Error("Illegal section ID " + id + ". Probably parsing incorrectly");
     }
 
     let payloadLen;
@@ -1906,10 +1867,7 @@ export class WailParser extends BufferReader {
 
     let parseSection = false;
 
-    if (
-      this._requiredSectionFlags & (1 << id) ||
-      this._optionalSectionFlags & (1 << id)
-    ) {
+    if (this._requiredSectionFlags & (1 << id) || this._optionalSectionFlags & (1 << id)) {
       parseSection = true;
     }
 
@@ -1925,10 +1883,7 @@ export class WailParser extends BufferReader {
 
         const thisSectionRequired = this._requiredSectionFlags & thisFlag;
 
-        if (
-          thisSectionRequired &&
-          !(thisSectionRequired & this._parsedSections)
-        ) {
+        if (thisSectionRequired && !(thisSectionRequired & this._parsedSections)) {
           switch (missingId) {
             case SECTION_TYPE:
               this._addTypeSection();
@@ -2126,10 +2081,7 @@ export class WailParser extends BufferReader {
     const newCount = oldCount + newEntries.length;
 
     let populateThisTimeOnly = false;
-    if (
-      !window.UnityWebModkit.Runtime ||
-      !window.UnityWebModkit.Runtime.internalWasmTypes
-    ) {
+    if (!window.UnityWebModkit.Runtime || !window.UnityWebModkit.Runtime.internalWasmTypes) {
       populateThisTimeOnly = true;
       window.UnityWebModkit.Runtime.internalWasmTypes = [];
     }
@@ -2271,15 +2223,13 @@ export class WailParser extends BufferReader {
         }
 
         if (optionsEntry.variable instanceof WailVariable) {
-          optionsEntry.variable.value =
-            this._importFuncCount + importFuncIndex++;
+          optionsEntry.variable.value = this._importFuncCount + importFuncIndex++;
         }
       } else if (optionsEntry.kind == KIND_GLOBAL) {
         type = [optionsEntry.type, optionsEntry.mutability];
 
         if (optionsEntry.variable instanceof WailVariable) {
-          optionsEntry.variable.value =
-            this._importGlobalCount + importGlobalIndex++;
+          optionsEntry.variable.value = this._importGlobalCount + importGlobalIndex++;
         }
       }
 
@@ -2335,8 +2285,7 @@ export class WailParser extends BufferReader {
     const reader = new BufferReader(oldPayload);
 
     const newEntries = this._sectionOptions[SECTION_IMPORT].newEntries;
-    const existingEntries =
-      this._sectionOptions[SECTION_IMPORT].existingEntries;
+    const existingEntries = this._sectionOptions[SECTION_IMPORT].existingEntries;
 
     // We need to count imported function signatures to accurately
     // get function indexes. Same with imported global variables
@@ -2455,8 +2404,7 @@ export class WailParser extends BufferReader {
         type = [optionsEntry.type, optionsEntry.mutability];
 
         if (optionsEntry.variable instanceof WailVariable) {
-          optionsEntry.variable.value =
-            this._importGlobalCount + importGlobalIndex;
+          optionsEntry.variable.value = this._importGlobalCount + importGlobalIndex;
         }
 
         importGlobalIndex++;
@@ -2474,9 +2422,7 @@ export class WailParser extends BufferReader {
 
     const newPayload = reader.write();
 
-    const newPayloadLen = VarUint32ToArray(
-      newCountArray.length + newPayload.length,
-    );
+    const newPayloadLen = VarUint32ToArray(newCountArray.length + newPayload.length);
 
     this.copyBuffer(newPayloadLen);
     this.copyBuffer(newCountArray);
@@ -2516,8 +2462,7 @@ export class WailParser extends BufferReader {
       if (optionsEntry.variable instanceof WailVariable) {
         const functionIndex = i + this._importFuncCount;
 
-        optionsEntry.variable.value =
-          this._getAdjustedFunctionIndex(functionIndex);
+        optionsEntry.variable.value = this._getAdjustedFunctionIndex(functionIndex);
       }
     }
 
@@ -2533,8 +2478,7 @@ export class WailParser extends BufferReader {
     this.commitBytes();
 
     const newEntries = this._sectionOptions[SECTION_FUNCTION].newEntries;
-    const existingEntries =
-      this._sectionOptions[SECTION_FUNCTION].existingEntries;
+    const existingEntries = this._sectionOptions[SECTION_FUNCTION].existingEntries;
 
     const oldPayloadLen = this.readVarUint32();
 
@@ -2548,10 +2492,7 @@ export class WailParser extends BufferReader {
     const reader = new BufferReader(oldPayload);
 
     let populateThisTimeOnly = false;
-    if (
-      !window.UnityWebModkit.Runtime ||
-      !window.UnityWebModkit.Runtime.internalWasmFunctions
-    ) {
+    if (!window.UnityWebModkit.Runtime || !window.UnityWebModkit.Runtime.internalWasmFunctions) {
       populateThisTimeOnly = true;
       window.UnityWebModkit.Runtime.internalWasmFunctions = [];
     }
@@ -2600,8 +2541,7 @@ export class WailParser extends BufferReader {
       if (optionsEntry.variable instanceof WailVariable) {
         const functionIndex = newCount + this._importFuncCount;
 
-        optionsEntry.variable.value =
-          this._getAdjustedFunctionIndex(functionIndex);
+        optionsEntry.variable.value = this._getAdjustedFunctionIndex(functionIndex);
       }
     }
 
@@ -2609,9 +2549,7 @@ export class WailParser extends BufferReader {
 
     const newPayload = reader.write();
 
-    const newPayloadLen = VarUint32ToArray(
-      newCountArray.length + newPayload.length,
-    );
+    const newPayloadLen = VarUint32ToArray(newCountArray.length + newPayload.length);
 
     this.copyBuffer(newPayloadLen);
     this.copyBuffer(newCountArray);
@@ -2665,8 +2603,7 @@ export class WailParser extends BufferReader {
     const reader = new BufferReader(oldPayload);
 
     const newEntries = this._sectionOptions[SECTION_GLOBAL].newEntries;
-    const existingEntries =
-      this._sectionOptions[SECTION_GLOBAL].existingEntries;
+    const existingEntries = this._sectionOptions[SECTION_GLOBAL].existingEntries;
 
     const newCount = oldCount + newEntries.length;
 
@@ -2786,8 +2723,7 @@ export class WailParser extends BufferReader {
     const oldCount = reader.readVarUint32();
 
     const newEntries = this._sectionOptions[SECTION_EXPORT].newEntries;
-    const existingEntries =
-      this._sectionOptions[SECTION_EXPORT].existingEntries;
+    const existingEntries = this._sectionOptions[SECTION_EXPORT].existingEntries;
 
     const newCount = oldCount + newEntries.length;
 
@@ -2975,14 +2911,10 @@ export class WailParser extends BufferReader {
     const reader = new BufferReader(oldPayload);
 
     const newEntries = this._sectionOptions[SECTION_ELEMENT].newEntries;
-    const existingEntries =
-      this._sectionOptions[SECTION_ELEMENT].existingEntries;
+    const existingEntries = this._sectionOptions[SECTION_ELEMENT].existingEntries;
 
     let populateThisTimeOnly = false;
-    if (
-      !window.UnityWebModkit.Runtime ||
-      !window.UnityWebModkit.Runtime.internalMappings
-    ) {
+    if (!window.UnityWebModkit.Runtime || !window.UnityWebModkit.Runtime.internalMappings) {
       populateThisTimeOnly = true;
       window.UnityWebModkit.Runtime.internalMappings = [];
     }
@@ -3068,9 +3000,7 @@ export class WailParser extends BufferReader {
 
     const newCountArray = VarUint32ToArray(newCount);
 
-    const newPayloadLen = VarUint32ToArray(
-      newCountArray.length + newPayload.length,
-    );
+    const newPayloadLen = VarUint32ToArray(newCountArray.length + newPayload.length);
 
     this.copyBuffer(newPayloadLen);
     this.copyBuffer(newCountArray);
@@ -3114,24 +3044,18 @@ export class WailParser extends BufferReader {
     reader.copyBuffer(VarUint32ToArray(newCount));
 
     let populateThisTimeOnly = false;
-    if (
-      !window.UnityWebModkit.Runtime ||
-      !window.UnityWebModkit.Runtime.internalWasmCode
-    ) {
+    if (!window.UnityWebModkit.Runtime || !window.UnityWebModkit.Runtime.internalWasmCode) {
       populateThisTimeOnly = true;
       window.UnityWebModkit.Runtime.internalWasmCode = [];
     }
 
     for (let i = 0; i < oldCount; i++) {
-      const funcIndex = this._getAdjustedFunctionIndex(
-        this._importFuncCount + i,
-      );
+      const funcIndex = this._getAdjustedFunctionIndex(this._importFuncCount + i);
 
       const readFunction = this._readFunction(reader, funcIndex);
       readFunction.preservedIndex = i;
 
-      if (!populateThisTimeOnly || readFunction.instructions.length !== 74)
-        continue;
+      if (!populateThisTimeOnly || readFunction.instructions.length !== 74) continue;
 
       window.UnityWebModkit.Runtime.internalWasmCode.push(readFunction);
     }
@@ -3343,18 +3267,12 @@ export class WailParser extends BufferReader {
     const instructions = [];
 
     for (let i = 0; i < localCount; i++) {
-      locals.push(
-        ...Array(headerReader.readVarUint32()).fill(
-          valueTypeStr[headerReader.readUint8()],
-        ),
-      );
+      locals.push(...Array(headerReader.readVarUint32()).fill(valueTypeStr[headerReader.readUint8()]));
     }
 
     headerReader.commitBytes();
 
-    const bodyReader = new BufferReader(
-      bodyPayload.subarray(headerReader.inPos),
-    );
+    const bodyReader = new BufferReader(bodyPayload.subarray(headerReader.inPos));
 
     while (bodyReader.inPos < bodyReader.inBuffer.length) {
       const instr = this._readInstruction(bodyReader);
@@ -3701,9 +3619,7 @@ export class WailParser extends BufferReader {
             reader.readUint8();
             break;
           default:
-            throw new Error(
-              "Unknown argument '" + arg + "' for OP_BULK_MEMORY",
-            );
+            throw new Error("Unknown argument '" + arg + "' for OP_BULK_MEMORY");
         }
         break;
       case OP_SIMD:
@@ -3966,11 +3882,7 @@ export class WailParser extends BufferReader {
         arg = reader.readUint8();
 
         if (arg > ARG_I64_ATOMIC_RMW_CMPXCHG_32U || (arg > 0x2 && arg < 0x10)) {
-          throw new Error(
-            "Unknown argument '" +
-              arg +
-              "' for OP_ATOMIC. Probably parsing incorrectly",
-          );
+          throw new Error("Unknown argument '" + arg + "' for OP_ATOMIC. Probably parsing incorrectly");
         }
 
         //reader.readUint8();
@@ -3979,9 +3891,7 @@ export class WailParser extends BufferReader {
 
         break;
       default:
-        throw new Error(
-          "Unknown opcode '" + opcode + "'. Probably parsing incorrectly",
-        );
+        throw new Error("Unknown opcode '" + opcode + "'. Probably parsing incorrectly");
     }
 
     reader.commitBytes();
@@ -3995,8 +3905,7 @@ export class WailParser extends BufferReader {
     } else if (typeof this._globalInstructionCallback === "function") {
       const instrBytes = reader.readFromAnchor();
 
-      const callbackResults =
-        this._globalInstructionCallback[opcode](instrBytes);
+      const callbackResults = this._globalInstructionCallback[opcode](instrBytes);
 
       reader.writeAtAnchor(callbackResults);
     }

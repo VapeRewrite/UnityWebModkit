@@ -66,13 +66,7 @@ export class Logger {
           break;
       }
 
-      console.log(
-        logPrefix + message,
-        logStyles,
-        messageStyles,
-        "color: default;",
-        ...args,
-      );
+      console.log(logPrefix + message, logStyles, messageStyles, "color: default;", ...args);
     }
   }
 

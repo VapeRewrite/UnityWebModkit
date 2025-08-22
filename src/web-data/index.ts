@@ -13,10 +13,7 @@ export class WebData {
   public nodes: WebDataNode[] = [];
   public unityVersion: string | undefined;
 
-  public constructor(
-    buffer: ArrayBuffer,
-    resolvableNodes?: [string, number?][],
-  ) {
+  public constructor(buffer: ArrayBuffer, resolvableNodes?: [string, number?][]) {
     const reader = new BinaryReader(buffer);
     this.signature = reader.readNullTerminatedUTF8String();
     this.headLen = reader.readUint32();
@@ -26,9 +23,7 @@ export class WebData {
         size: reader.readUint32(),
         name: reader.readUTF8StringWithLength(),
       };
-      const resolvableNode = resolvableNodes?.find(
-        (item) => item[0] === node.name,
-      );
+      const resolvableNode = resolvableNodes?.find((item) => item[0] === node.name);
       if (!resolvableNode) continue;
       node.size = resolvableNode[1] ?? node.size;
       this.nodes.push(node);

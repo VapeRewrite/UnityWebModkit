@@ -25,10 +25,7 @@ function loadWebData(): Promise<WebData> {
 
       request.onsuccess = (event: any) => {
         const db = event.target.result;
-        const requestCacheEntries = db
-          .transaction(["RequestStore"], "readonly")
-          .objectStore("RequestStore")
-          .getAll();
+        const requestCacheEntries = db.transaction(["RequestStore"], "readonly").objectStore("RequestStore").getAll();
         requestCacheEntries.onsuccess = async (event: any) => {
           const entries = event.target.result;
           if (entries.length === 0) {
@@ -63,8 +60,5 @@ async function fallbackInterceptFetch(): Promise<WebData> {
 }
 
 function parseWebData(data: ArrayBuffer): WebData {
-  return new WebData(data, [
-    ["data.unity3d", 32],
-    ["Il2CppData/Metadata/global-metadata.dat"],
-  ]);
+  return new WebData(data, [["data.unity3d", 32], ["Il2CppData/Metadata/global-metadata.dat"]]);
 }

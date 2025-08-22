@@ -22,10 +22,7 @@ export function makeId(length: number): string {
   return text;
 }
 
-export function patternSearch(
-  mainArray: Uint8Array,
-  subArray: Uint8Array,
-): number[] {
+export function patternSearch(mainArray: Uint8Array, subArray: Uint8Array): number[] {
   const indexes: number[] = [];
   if (subArray.length === 0) return indexes;
 
@@ -74,10 +71,7 @@ export function concatenateUint8Arrays(arrays: Uint8Array[]) {
   return concatenatedArray;
 }
 
-export function uint8ArrayStartsWith(
-  array: Uint8Array,
-  expectedNumbers: number[],
-) {
+export function uint8ArrayStartsWith(array: Uint8Array, expectedNumbers: number[]) {
   if (array.length < expectedNumbers.length) {
     return false;
   }
@@ -91,15 +85,9 @@ export function uint8ArrayStartsWith(
   return true;
 }
 
-export function writeUint8ArrayAtOffset(
-  destination: Uint8Array,
-  source: Uint8Array,
-  offset: number,
-): void {
+export function writeUint8ArrayAtOffset(destination: Uint8Array, source: Uint8Array, offset: number): void {
   if (offset + source.length > destination.length) {
-    throw new Error(
-      "Source array does not fit at the specified offset in the destination array.",
-    );
+    throw new Error("Source array does not fit at the specified offset in the destination array.");
   }
 
   for (let i = 0; i < source.length; i++) {
@@ -108,9 +96,7 @@ export function writeUint8ArrayAtOffset(
 }
 
 export function bufToHex(buffer: ArrayBuffer) {
-  return [...new Uint8Array(buffer)]
-    .map((x) => x.toString(16).padStart(2, "0"))
-    .join("");
+  return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 function generateLPSArray(pattern: Uint8Array): number[] {

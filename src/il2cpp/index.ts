@@ -248,15 +248,8 @@ export function createIl2CppContext(
     metadata.originalImageDefCount,
   );
   const codeRegistration = sectionHelper.findCodeRegistration();
-  const pCodeRegistration = readCodeRegistration(
-    memoryReader,
-    codeRegistration,
-  );
-  const pCodeGenModules = readCodeGenModules(
-    memoryReader,
-    pCodeRegistration.codeGenModules,
-    pCodeRegistration.codeGenModulesCount,
-  );
+  const pCodeRegistration = readCodeRegistration(memoryReader, codeRegistration);
+  const pCodeGenModules = readCodeGenModules(memoryReader, pCodeRegistration.codeGenModules, pCodeRegistration.codeGenModulesCount);
   const codeGenModules: Il2CppCodeGenModuleCollection = {};
   const codeGenModuleMethodPointers: Il2CppCodeGenModuleMethodPointers = {};
   for (let i = 0; i < pCodeGenModules.length; i++) {
@@ -265,53 +258,30 @@ export function createIl2CppContext(
     const moduleName = memoryReader.readNullTerminatedUTF8String();
     if (!referencedAssemblies?.includes(moduleName)) continue;
     codeGenModules[moduleName] = pCodeGenModule;
-    const methodPointers = readCodeGenModuleMethodPointers(
-      memoryReader,
-      pCodeGenModule.methodPointers,
-      pCodeGenModule.methodPointerCount,
-    );
+    const methodPointers = readCodeGenModuleMethodPointers(memoryReader, pCodeGenModule.methodPointers, pCodeGenModule.methodPointerCount);
     codeGenModuleMethodPointers[moduleName] = methodPointers;
   }
   const scriptData: Il2CppScriptData = {};
   const metadataReader = new BinaryReader(metadata.buffer);
   for (let j = 0; j < metadata.imageDefs.length; j++) {
     let imageDef = metadata.imageDefs[j];
-    let imageName = getStringFromIndex(
-      metadataReader,
-      metadata.header.stringOffset,
-      imageDef.nameIndex,
-    );
+    let imageName = getStringFromIndex(metadataReader, metadata.header.stringOffset, imageDef.nameIndex);
     let typeEnd = imageDef.typeStart + imageDef.typeCount;
     for (let k = imageDef.typeStart; k < typeEnd; k++) {
       let typeDef = metadata.typeDefs.find((def) => def.typeIndex === k);
       if (!typeDef) continue;
-      let typeName = getStringFromIndex(
-        metadataReader,
-        metadata.header.stringOffset,
-        typeDef.nameIndex,
-      );
-      const namespaceName = getStringFromIndex(
-        metadataReader,
-        metadata.header.stringOffset,
-        typeDef.namespaceIndex,
-      );
+      let typeName = getStringFromIndex(metadataReader, metadata.header.stringOffset, typeDef.nameIndex);
+      const namespaceName = getStringFromIndex(metadataReader, metadata.header.stringOffset, typeDef.namespaceIndex);
       let methodEnd = typeDef.methodStart + typeDef.method_count;
       for (let l = typeDef.methodStart; l < methodEnd; l++) {
-        let methodDef = metadata.methodDefs.find(
-          (def) => def.methodIndex === l,
-        );
+        let methodDef = metadata.methodDefs.find((def) => def.methodIndex === l);
         if (!methodDef) continue;
-        let methodName = getStringFromIndex(
-          metadataReader,
-          metadata.header.stringOffset,
-          methodDef.nameIndex,
-        );
+        let methodName = getStringFromIndex(metadataReader, metadata.header.stringOffset, methodDef.nameIndex);
         let methodToken = methodDef.token;
         let ptrs = codeGenModuleMethodPointers[imageName];
         let methodPointerIndex = methodToken & 0x00ffffff;
         const ptr = ptrs[methodPointerIndex - 1];
-        const fullTypeName =
-          namespaceName === "" ? typeName : namespaceName + "." + typeName;
+        const fullTypeName = namespaceName === "" ? typeName : namespaceName + "." + typeName;
         if (!scriptData[fullTypeName]) {
           scriptData[fullTypeName] = {}; // Create an empty object if it doesn't exist
         }
@@ -341,71 +311,33 @@ export async function createMetadata(
 ): Promise<Result<Il2CppMetadata, MetadataParsingError>> {
   const reader = new BinaryReader(buffer);
   const sanity = reader.readUint32();
-  if (sanity !== 0xfab11baf)
-    return err(
-      new MetadataParsingError(
-        "Metadata file supplied is not a valid metadata file.",
-      ),
-    );
+  if (sanity !== 0xfab11baf) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
   const version = reader.readUint32();
-  if (version < 0 || version > 1000)
-    return err(
-      new MetadataParsingError(
-        "Metadata file supplied is not a valid metadata file.",
-      ),
-    );
+  if (version < 0 || version > 1000) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
   // TODO: Support more metadata versions
-  if (version !== 29)
-    return err(
-      new MetadataParsingError(
-        `Metadata file supplied is not a supported version [${version}].`,
-      ),
-    );
+  if (version !== 29) return err(new MetadataParsingError(`Metadata file supplied is not a supported version [${version}].`));
   reader.seek(0);
   const header = readHeader(reader);
-  const imageDefs = readImageDefinitions(
-    reader,
-    header.imagesOffset,
-    header.imagesSize,
-  );
+  const imageDefs = readImageDefinitions(reader, header.imagesOffset, header.imagesSize);
   const referencedImageDefs = [];
   var i = 0,
     len = imageDefs.length;
   while (i < len) {
     const imageDef = imageDefs[i];
-    const imageName = getStringFromIndex(
-      reader,
-      header.stringOffset,
-      imageDef.nameIndex,
-    );
-    if (referencedAssemblies?.includes(imageName))
-      referencedImageDefs.push(imageDef);
+    const imageName = getStringFromIndex(reader, header.stringOffset, imageDef.nameIndex);
+    if (referencedAssemblies?.includes(imageName)) referencedImageDefs.push(imageDef);
     i++;
   }
-  let typeDefs = readTypeDefinitions(
-    reader,
-    header.typeDefinitionsOffset,
-    header.typeDefinitionsSize,
-    referencedImageDefs,
-  );
-  const methodDefs = readMethodDefinitions(
-    reader,
-    header.methodsOffset,
-    header.methodsSize,
-  );
+  let typeDefs = readTypeDefinitions(reader, header.typeDefinitionsOffset, header.typeDefinitionsSize, referencedImageDefs);
+  const methodDefs = readMethodDefinitions(reader, header.methodsOffset, header.methodsSize);
   const referencedMethodDefs = [];
   (i = 0), (len = methodDefs.length);
   while (i < len) {
     const methodDef = methodDefs[i];
-    if (
-      typeDefs.findIndex((t) => t.typeIndex === methodDef.declaringType) !== -1
-    )
-      referencedMethodDefs.push(methodDef);
+    if (typeDefs.findIndex((t) => t.typeIndex === methodDef.declaringType) !== -1) referencedMethodDefs.push(methodDef);
     i++;
   }
-  const integrityHash = bufToHex(
-    await window.crypto.subtle.digest("SHA-256", buffer),
-  );
+  const integrityHash = bufToHex(await window.crypto.subtle.digest("SHA-256", buffer));
   return ok({
     buffer,
     header,
@@ -421,25 +353,16 @@ export async function createMetadata(
   });
 }
 
-function getStringFromIndex(
-  reader: BinaryReader,
-  base: number,
-  offset: number,
-) {
+function getStringFromIndex(reader: BinaryReader, base: number, offset: number) {
   reader.seek(base + offset);
   return reader.readNullTerminatedUTF8String();
 }
 
-function isReferencedType(
-  imageDefinitions: Il2CppImageDefinition[],
-  typeDefinitionsOffset: number,
-  readerOffset: number,
-) {
+function isReferencedType(imageDefinitions: Il2CppImageDefinition[], typeDefinitionsOffset: number, readerOffset: number) {
   const typeDefStructSize = 88; // TODO: define this somewhere else
 
   for (const imageDef of imageDefinitions) {
-    let typeStart =
-      imageDef.typeStart * typeDefStructSize + typeDefinitionsOffset;
+    let typeStart = imageDef.typeStart * typeDefStructSize + typeDefinitionsOffset;
     let typeCount = imageDef.typeCount * typeDefStructSize;
     let typeEnd = typeStart + typeCount;
     if (readerOffset >= typeStart && readerOffset < typeEnd) {
@@ -529,11 +452,7 @@ function readHeader(reader: BinaryReader): Il2CppGlobalMetadataHeader {
   };
 }
 
-function readImageDefinitions(
-  reader: BinaryReader,
-  offset: number,
-  size: number,
-): Il2CppImageDefinition[] {
+function readImageDefinitions(reader: BinaryReader, offset: number, size: number): Il2CppImageDefinition[] {
   reader.seek(offset);
   const imageDefinitions = [];
   const imagesEnd = offset + size;
@@ -595,18 +514,13 @@ function readTypeDefinitions(
       token: reader.readUint32(),
     };
     i++;
-    if (!isReferencedType(imageDefinitions, offset, reader.offset - 1))
-      continue;
+    if (!isReferencedType(imageDefinitions, offset, reader.offset - 1)) continue;
     typeDefinitions.push(typeDef);
   }
   return typeDefinitions;
 }
 
-function readMethodDefinitions(
-  reader: BinaryReader,
-  offset: number,
-  size: number,
-): Il2CppMethodDefinition[] {
+function readMethodDefinitions(reader: BinaryReader, offset: number, size: number): Il2CppMethodDefinition[] {
   reader.seek(offset);
   const methodDefinitions = [];
   const methodsEnd = offset + size;
@@ -651,11 +565,7 @@ function readCodeRegistration(reader: BinaryReader, offset: number) {
   };
 }
 
-function readCodeGenModules(
-  reader: BinaryReader,
-  offset: number,
-  size: number,
-) {
+function readCodeGenModules(reader: BinaryReader, offset: number, size: number) {
   reader.seek(offset);
   const modules = [];
   for (let i = 0; i < size; i++) {
@@ -664,10 +574,7 @@ function readCodeGenModules(
   return modules;
 }
 
-function readCodeGenModule(
-  reader: BinaryReader,
-  offset: number,
-): Il2CppCodeGenModule {
+function readCodeGenModule(reader: BinaryReader, offset: number): Il2CppCodeGenModule {
   reader.seek(offset);
   return {
     moduleName: reader.readUint32(),
@@ -690,11 +597,7 @@ function readCodeGenModule(
   };
 }
 
-function readCodeGenModuleMethodPointers(
-  reader: BinaryReader,
-  offset: number,
-  size: number,
-) {
+function readCodeGenModuleMethodPointers(reader: BinaryReader, offset: number, size: number) {
   reader.seek(offset);
   const methodPointers = [];
   for (let i = 0; i < size; i++) {
@@ -703,13 +606,7 @@ function readCodeGenModuleMethodPointers(
   return methodPointers;
 }
 
-function getSectionHelper(
-  length: number,
-  memoryBuffer: ArrayBuffer,
-  bssStart: number,
-  methodCount: number,
-  imageCount: number,
-) {
+function getSectionHelper(length: number, memoryBuffer: ArrayBuffer, bssStart: number, methodCount: number, imageCount: number) {
   const exec = {
     offset: 0,
     offsetEnd: methodCount,
@@ -742,10 +639,7 @@ class SectionHelper {
   private memoryReader: BinaryReader;
   private imageCount: number;
 
-  private static featureBytes = new Uint8Array([
-    0x6d, 0x73, 0x63, 0x6f, 0x72, 0x6c, 0x69, 0x62, 0x2e, 0x64, 0x6c, 0x6c,
-    0x00,
-  ]);
+  private static featureBytes = new Uint8Array([0x6d, 0x73, 0x63, 0x6f, 0x72, 0x6c, 0x69, 0x62, 0x2e, 0x64, 0x6c, 0x6c, 0x00]);
 
   constructor(memoryBuffer: any, imageCount: number) {
     this.memoryReader = new BinaryReader(memoryBuffer);
@@ -809,8 +703,7 @@ class SectionHelper {
     for (let i = 0; i < this.data.length; i++) {
       const dataSec = this.data[i];
       var position = dataSec.offset;
-      const end =
-        Math.min(dataSec.offsetEnd, this.memoryReader.buffer.byteLength) - 4;
+      const end = Math.min(dataSec.offsetEnd, this.memoryReader.buffer.byteLength) - 4;
       while (position < end) {
         this.memoryReader.seek(position);
         if (this.memoryReader.readUint32() === addr) {

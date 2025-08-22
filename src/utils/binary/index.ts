@@ -28,17 +28,13 @@ export class BinaryReader {
   public readNullTerminatedUTF8String() {
     const startOffset = this._offset;
     while (this._view.getUint8(this._offset++) !== 0) {}
-    const utf8String = this._utf8decoder.decode(
-      this._view.buffer.slice(startOffset, this._offset - 1),
-    );
+    const utf8String = this._utf8decoder.decode(this._view.buffer.slice(startOffset, this._offset - 1));
     return utf8String;
   }
 
   public readUTF8StringWithLength() {
     const stringLength = this.readUint32();
-    const utf8String = this._utf8decoder.decode(
-      this._view.buffer.slice(this._offset, this._offset + stringLength),
-    );
+    const utf8String = this._utf8decoder.decode(this._view.buffer.slice(this._offset, this._offset + stringLength));
     this._offset += stringLength;
     return utf8String;
   }
@@ -122,9 +118,7 @@ export class BinaryWriter {
       this._view.setUint8(this._offset, value);
       this._offset += 1;
     } else {
-      throw new Error(
-        "Buffer overflow: Cannot write beyond the ArrayBuffer length.",
-      );
+      throw new Error("Buffer overflow: Cannot write beyond the ArrayBuffer length.");
     }
   }
 
@@ -133,9 +127,7 @@ export class BinaryWriter {
       this._view.setInt32(this._offset, value, this._littleEndian);
       this._offset += 4;
     } else {
-      throw new Error(
-        "Buffer overflow: Cannot write beyond the ArrayBuffer length.",
-      );
+      throw new Error("Buffer overflow: Cannot write beyond the ArrayBuffer length.");
     }
   }
 
@@ -144,9 +136,7 @@ export class BinaryWriter {
       this._view.setUint32(this._offset, value, this._littleEndian);
       this._offset += 4;
     } else {
-      throw new Error(
-        "Buffer overflow: Cannot write beyond the ArrayBuffer length.",
-      );
+      throw new Error("Buffer overflow: Cannot write beyond the ArrayBuffer length.");
     }
   }
 
@@ -155,9 +145,7 @@ export class BinaryWriter {
       this._view.setFloat32(this._offset, value, this._littleEndian);
       this._offset += 4;
     } else {
-      throw new Error(
-        "Buffer overflow: Cannot write beyond the ArrayBuffer length.",
-      );
+      throw new Error("Buffer overflow: Cannot write beyond the ArrayBuffer length.");
     }
   }
 
@@ -172,9 +160,7 @@ export class BinaryWriter {
         this._offset++;
       }
     } else {
-      throw new Error(
-        "Buffer overflow: Cannot write beyond the ArrayBuffer length.",
-      );
+      throw new Error("Buffer overflow: Cannot write beyond the ArrayBuffer length.");
     }
   }
 
