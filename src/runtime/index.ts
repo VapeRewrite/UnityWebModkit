@@ -139,7 +139,7 @@ export class Runtime {
           reject();
           return;
         }
-        const request = window.indexedDB.open("UnityWebModkit", 2);
+        const request = window.indexedDB.open("UnityWebModkit");
         request.onsuccess = () => {
           const transaction = request.result.transaction(["storage"]);
           const objectStore = transaction.objectStore("storage");

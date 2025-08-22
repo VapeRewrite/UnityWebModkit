@@ -142,6 +142,7 @@ type Il2CppMethodDefinition = {
   nameIndex: number;
   declaringType: number;
   returnType: number;
+  returnParameterToken?: number;
   parameterStart: number;
   genericContainerIndex: number;
   token: number;
@@ -315,7 +316,7 @@ export async function createMetadata(
   const version = reader.readUint32();
   if (version < 0 || version > 1000) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
   // TODO: Support more metadata versions
-  if (version !== 29) return err(new MetadataParsingError(`Metadata file supplied is not a supported version [${version}].`));
+  if (version !== 31) return err(new MetadataParsingError(`Metadata file supplied is not a supported version [${version}].`));
   reader.seek(0);
   const header = readHeader(reader);
   const imageDefs = readImageDefinitions(reader, header.imagesOffset, header.imagesSize);
@@ -531,6 +532,7 @@ function readMethodDefinitions(reader: BinaryReader, offset: number, size: numbe
       nameIndex: reader.readUint32(),
       declaringType: reader.readInt32(),
       returnType: reader.readInt32(),
+      returnParameterToken: reader.readInt32(),
       parameterStart: reader.readInt32(),
       genericContainerIndex: reader.readInt32(),
       token: reader.readUint32(),

@@ -15,17 +15,46 @@ function loadWebData(): Promise<WebData> {
   logger.debug("Trying to load Unity web data from indexedDB cache");
   return new Promise<WebData>((resolve) => {
     indexedDB.databases().then(async (databases) => {
+      logger.debug("databases:", databases);
       const unityCache = databases.findIndex((d) => d.name === "UnityCache");
       if (unityCache == -1) {
         resolve(await fallbackInterceptFetch());
         return;
       }
+      console.log("UnityCache:", unityCache);
 
-      const request = window.indexedDB.open("UnityCache", 3);
+      logger.debug("Trying to open UnityCache...");
+      const request = window.indexedDB.open("UnityCache");
+      logger.debug("request:", request);
 
-      request.onsuccess = (event: any) => {
+      request.onsuccess = async (event: any) => {
         const db = event.target.result;
+        // (request.result.version === 4) -> (request.result.objectStoreNames[0] === "RequestMetaDataStore")
+        logger.debug("objectStoreName:", request.result.objectStoreNames[0]);
+        if (request.result.objectStoreNames[0] === "RequestMetaDataStore") {
+          db.close();
+          caches.keys().then((keys) => {
+            keys.forEach((key) => {
+              caches.open(key).then((cache) => {
+                cache.keys().then((requests) => {
+                  requests.forEach((req) => {
+                    if (req.url.includes(".data")) {
+                      cache.match(req).then((res) => {
+                        if (!res) return;
+                        res.arrayBuffer().then((buf) => {
+                          resolve(parseWebData(buf));
+                        });
+                      });
+                    }
+                  });
+                });
+              });
+            });
+          });
+          return;
+        }
         const requestCacheEntries = db.transaction(["RequestStore"], "readonly").objectStore("RequestStore").getAll();
+        logger.debug("requestCacheEntries:", requestCacheEntries);
         requestCacheEntries.onsuccess = async (event: any) => {
           const entries = event.target.result;
           if (entries.length === 0) {
@@ -48,6 +77,7 @@ async function fallbackInterceptFetch(): Promise<WebData> {
   return new Promise<WebData>((resolve) => {
     const originalFetch = window.fetch;
     window.fetch = async function (url) {
+      logger.debug(url);
       if ((url as string).includes("webgl.data.br")) {
         window.fetch = originalFetch;
         const response = await originalFetch.apply(this, arguments as any);
