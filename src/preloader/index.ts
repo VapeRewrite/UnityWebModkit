@@ -33,24 +33,22 @@ function loadWebData(): Promise<WebData> {
         logger.debug("objectStoreName:", request.result.objectStoreNames[0]);
         if (request.result.objectStoreNames[0] === "RequestMetaDataStore") {
           db.close();
-          caches.keys().then((keys) => {
-            keys.forEach((key) => {
-              caches.open(key).then((cache) => {
-                cache.keys().then((requests) => {
-                  requests.forEach((req) => {
-                    if (req.url.includes(".data")) {
-                      cache.match(req).then((res) => {
-                        if (!res) return;
-                        res.arrayBuffer().then((buf) => {
-                          resolve(parseWebData(buf));
-                        });
-                      });
-                    }
-                  });
-                });
-              });
-            });
-          });
+          const keys = await caches.keys();
+
+          for (const key of keys) {
+            const cache = await caches.open(key);
+            const requests = await cache.keys();
+
+            for (const req of requests) {
+              if (!req.url.includes(".data")) continue;
+
+              const res = await cache.match(req);
+              if (!res) continue;
+
+              resolve(parseWebData(await res.arrayBuffer()));
+              return;
+            }
+          }
           return;
         }
         const requestCacheEntries = db.transaction(["RequestStore"], "readonly").objectStore("RequestStore").getAll();
