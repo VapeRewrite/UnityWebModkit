@@ -1,4 +1,4 @@
-import { LogLevel, Logger } from "../logger";
+import { Logger } from "../logger";
 import { WebData } from "../web-data";
 import { version } from "../index";
 

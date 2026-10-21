@@ -8,7 +8,8 @@
 		"declaration": true,
 		"strict": true,
 		"allowJs": true,
-		"rootDir": "src"
+		"rootDir": "src",
+		"isolatedDeclarations": true
 	},
 	"exclude": ["tsdown.config.ts", "dist"]
 }

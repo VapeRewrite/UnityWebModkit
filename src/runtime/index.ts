@@ -379,7 +379,7 @@ export class Runtime {
     }
   }
 
-  public resolveTableName(asm: any) {
+  public resolveTableName(asm: any): string {
     return Object.keys(asm).find((key) => asm[key].constructor.name == "Table") || "Unknown";
   }
 
@@ -413,7 +413,7 @@ export class Runtime {
     return _game.instance.Module._malloc(size);
   }
 
-  public free(block: number | ValueWrapper) {
+  public free(block: number | ValueWrapper): void {
     // @ts-ignore
     const _game = window.game || game;
     _game.instance.Module._free(block instanceof ValueWrapper ? block.val() : block);
@@ -500,11 +500,11 @@ class ModkitPlugin {
     this._runtime = runtime;
   }
 
-  public get hooks() {
+  public get hooks(): Hook[] {
     return this._hooks;
   }
 
-  public get referencedAssemblies() {
+  public get referencedAssemblies(): string[] {
     return this._referencedAssemblies;
   }
 
@@ -571,11 +571,11 @@ class ModkitPlugin {
     return new ValueWrapper(this._runtime.malloc(size));
   }
 
-  public free(block: ValueWrapper | number) {
+  public free(block: ValueWrapper | number): void {
     this._runtime.free(block);
   }
 
-  public memcpy(dest: ValueWrapper | number, src: ValueWrapper | number, count: number) {
+  public memcpy(dest: ValueWrapper | number, src: ValueWrapper | number, count: number): void {
     // @ts-ignore
     const _game = window.game || game;
     writeUint8ArrayAtOffset(_game.instance.Module.HEAPU8, this.slice(src, count), dest instanceof ValueWrapper ? dest.val() : dest);
@@ -589,7 +589,7 @@ export class ValueWrapper {
     this._result = result;
   }
 
-  public set(value: ValueWrapper | number) {
+  public set(value: ValueWrapper | number): void {
     this._result = value instanceof ValueWrapper ? value.val() : value;
   }
 
@@ -597,7 +597,7 @@ export class ValueWrapper {
     return this._result;
   }
 
-  public mstr() {
+  public mstr(): string {
     return ValueWrapper.readUtf16Char(this._result + 12);
   }
 
@@ -624,7 +624,7 @@ export class ValueWrapper {
     }
   }
 
-  public readField(offset: number, type: string) {
+  public readField(offset: number, type: string): ValueWrapper | undefined {
     // @ts-ignore
     const _game = window.game || game;
     const valAddress = this._result + offset;
@@ -642,7 +642,7 @@ export class ValueWrapper {
     }
   }
 
-  public writeField(offset: number, type: string, value: ValueWrapper | number) {
+  public writeField(offset: number, type: string, value: ValueWrapper | number): void {
     // @ts-ignore
     const _game = window.game || game;
     let size = dataTypeSizes[type];
