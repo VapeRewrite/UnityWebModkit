@@ -1,13 +1,11 @@
 import { LogLevel, Logger } from "../logger";
 import { WebData } from "../web-data";
-import { version } from "../mod";
+import { version } from "../index";
 
 const logger = new Logger("Preloader");
 
 export function preload(): Promise<WebData> {
   logger.info("UnityWebModkit v%s - %s", version, window.location.hostname);
-  // @ts-ignore Set by webpack at bundle time
-  logger.info("Build hash: %s", __webpack_hash__);
   return loadWebData();
 }
 

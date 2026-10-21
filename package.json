@@ -1,30 +1,23 @@
 {
-  "name": "unity-web-modkit-v2",
-  "version": "1.1.0",
+  "name": "@vape-rewrite/unity-web-modkit",
+  "version": "0.0.0",
   "description": "",
-  "main": "./lib/mod.js",
+  "main": "./dist/mod.js",
   "types": "./lib/mod.d.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "del /q /s dist && tsc && npx webpack && powershell -Command \"(Get-Content -Path ./dist/*.js -Raw) -replace 'window.UnityWebModkit=n', 'if (!unsafeWindow?.UnityWebModkit)unsafeWindow.UnityWebModkit = n,window.UnityWebModkit = n' | Set-Content -Path ./dist/*.js\"",
-    "mybuild": "del /q /s dist && tsc && npx webpack --output-filename unity-web-modkit.js && powershell -Command \"(Get-Content -Path ./dist/unity-web-modkit.js -Raw) -replace 'window.UnityWebModkit=n', 'if (!unsafeWindow?.UnityWebModkit)unsafeWindow.UnityWebModkit = n,window.UnityWebModkit = n' | Set-Content -Path ./dist/unity-web-modkit.js\""
-  },
   "files": [
-    "lib"
+    "dist"
   ],
+  "packageManager": "bun@1.4.3",
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "6x68",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@rspack/cli": "^0.2.8",
-    "prettier": "3.0.0",
-    "ts-loader": "^9.4.4",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.1.6",
-    "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4"
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "tsdown": "^0.23.1",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
-    "neverthrow": "^6.0.0"
+    "neverthrow": "^8.2.0"
   }
 }
