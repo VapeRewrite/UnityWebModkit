@@ -25,51 +25,51 @@ export class BinaryReader {
     this._offset = offset;
   }
 
-  public readNullTerminatedUTF8String() {
+  public readNullTerminatedUTF8String(): string {
     const startOffset = this._offset;
     while (this._view.getUint8(this._offset++) !== 0) {}
     const utf8String = this._utf8decoder.decode(this._view.buffer.slice(startOffset, this._offset - 1));
     return utf8String;
   }
 
-  public readUTF8StringWithLength() {
+  public readUTF8StringWithLength(): string {
     const stringLength = this.readUint32();
     const utf8String = this._utf8decoder.decode(this._view.buffer.slice(this._offset, this._offset + stringLength));
     this._offset += stringLength;
     return utf8String;
   }
 
-  public readUint8() {
+  public readUint8(): number {
     const value = this._view.getUint8(this._offset);
     this._offset++;
     return value;
   }
 
-  public readUint16() {
+  public readUint16(): number {
     const value = this._view.getUint16(this._offset, this._littleEndian);
     this._offset += 2;
     return value;
   }
 
-  public readInt32() {
+  public readInt32(): number {
     const value = this._view.getInt32(this._offset, this._littleEndian);
     this._offset += 4;
     return value;
   }
 
-  public readUint32() {
+  public readUint32(): number {
     const value = this._view.getUint32(this._offset, this._littleEndian);
     this._offset += 4;
     return value;
   }
 
-  public readFloat() {
+  public readFloat(): number {
     const value = this._view.getFloat32(this._offset, this._littleEndian);
     this._offset += 4;
     return value;
   }
 
-  public readULEB128() {
+  public readULEB128(): number {
     let result = 0;
     let shift = 0;
     let byte;
@@ -89,7 +89,7 @@ export class BinaryReader {
     return new Uint8Array(slice);
   }
 
-  public readSlice(offset: number, length: number) {
+  public readSlice(offset: number, length: number): ArrayBuffer | SharedArrayBuffer {
     return this._view.buffer.slice(offset, offset + length);
   }
 }
