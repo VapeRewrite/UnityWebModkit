@@ -104,7 +104,7 @@ impl BinaryStream {
 	pub fn peek_string_to_null_at(&self, offset: u64) -> Result<String> {
 		let mut i = offset as usize;
 		if i >= self.data.len() {
-			return Err(Error::OutOfBounds(OutOfBoundsErr{ offset, size: 1 }));
+			return Err(Error::OutOfBounds(OutOfBoundsErr { offset, size: 1 }));
 		}
 		let start = i;
 		while i < self.data.len() && self.data[i] != 0 {

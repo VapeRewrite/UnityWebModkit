@@ -1,12 +1,12 @@
 use alloc::string::String;
-use wasm_bindgen::prelude::wasm_bindgen;
 use core::fmt;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct OutOfBoundsErr {
 	pub offset: u64,
-	pub size: usize
+	pub size: usize,
 }
 
 #[wasm_bindgen]
@@ -14,7 +14,7 @@ pub struct OutOfBoundsErr {
 pub struct InvalidArraySizeErr {
 	pub count: u64,
 	pub elem_size: usize,
-    #[wasm_bindgen(getter_with_clone)]
+	#[wasm_bindgen(getter_with_clone)]
 	pub context: String,
 }
 
