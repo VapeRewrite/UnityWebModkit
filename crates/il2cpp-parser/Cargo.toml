@@ -1,0 +1,21 @@
+[package]
+name = "il2cpp-parser"
+description = "Parses IL2CPP WASM binaries"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0"
+repository = ""
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["wasm"]
+wasm = ["wasm-bindgen"]
+
+[dependencies]
+wasm-bindgen = { version = "0.2", optional = true }
+
+[profile.release]
+opt-level = "s"
+lto = true
