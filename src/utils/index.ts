@@ -51,7 +51,7 @@ export function patternSearch(mainArray: Uint8Array, subArray: Uint8Array): numb
   return indexes;
 }
 
-export function concatenateUint8Arrays(arrays: Uint8Array[]) {
+export function concatenateUint8Arrays(arrays: Uint8Array[]): Uint8Array<ArrayBuffer> {
   // Calculate the total length of the concatenated array
   let totalLength = 0;
   arrays.forEach((array) => {
@@ -71,7 +71,7 @@ export function concatenateUint8Arrays(arrays: Uint8Array[]) {
   return concatenatedArray;
 }
 
-export function uint8ArrayStartsWith(array: Uint8Array, expectedNumbers: number[]) {
+export function uint8ArrayStartsWith(array: Uint8Array, expectedNumbers: number[]): boolean {
   if (array.length < expectedNumbers.length) {
     return false;
   }
@@ -95,7 +95,7 @@ export function writeUint8ArrayAtOffset(destination: Uint8Array, source: Uint8Ar
   }
 }
 
-export function bufToHex(buffer: ArrayBuffer) {
+export function bufToHex(buffer: ArrayBuffer): string {
   return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 

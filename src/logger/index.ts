@@ -8,6 +8,18 @@ export enum LogLevel {
   ALL = 0x1f,
 }
 
+const {log, error, warn, debug, info} = console;
+
+const l2m = {
+  [LogLevel.NONE]: log,
+  [LogLevel.MESSAGE]: log,
+  [LogLevel.ALL]: log,
+  [LogLevel.ERROR]: error,
+  [LogLevel.WARN]: warn,
+  [LogLevel.DEBUG]: debug,
+  [LogLevel.INFO]: info,
+} satisfies Record<LogLevel, (...data: any[]) => void>;
+
 export class Logger {
   private name: string;
 
@@ -66,7 +78,7 @@ export class Logger {
           break;
       }
 
-      console.log(logPrefix + message, logStyles, messageStyles, "color: default;", ...args);
+      l2m[level](logPrefix + message, logStyles, messageStyles, "color: default;", ...args);
     }
   }
 

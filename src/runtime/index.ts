@@ -1,6 +1,6 @@
 import { Logger } from "../logger";
 import { UnresolvedMetadataError } from "../errors";
-import { createIl2CppContext, createMetadata, Il2CppContext, Il2CppMetadata } from "../il2cpp";
+import { createMetadata, Il2CppContext, Il2CppMetadata } from "../il2cpp";
 import { WebData } from "../web-data";
 import { preload } from "../preloader";
 import { bufToHex, waitFor, writeUint8ArrayAtOffset } from "../utils";
@@ -28,7 +28,6 @@ export class Runtime {
 	private logger: Logger;
 	private plugins: ModkitPlugin[] = [];
 	private startedInitializing = false;
-	private allReferencedAssemblies: string[] = [];
 	private globalMetadata: Il2CppMetadata | null | undefined;
 	private il2CppContext: Il2CppContext | undefined;
 	private resolvedIl2CppFunctions: Record<string, number> = {};
@@ -82,12 +81,8 @@ export class Runtime {
 			);
 			return;
 		}
-		this.allReferencedAssemblies = this.plugins.flatMap(
-			(plugin) => plugin.referencedAssemblies,
-		);
 		const globalMetadata = await createMetadata(
-			metadataNode.data,
-			this.allReferencedAssemblies,
+			metadataNode.data
 		);
 		if (globalMetadata.isErr()) {
 			this.logger.error(globalMetadata.error.print());
@@ -146,17 +141,7 @@ export class Runtime {
 							reject();
 							return;
 						}
-						this.allReferencedAssemblies = this.plugins.flatMap(
-							(plugin) => plugin.referencedAssemblies,
-						);
 						const globalMetadata = metadataRequest.result;
-						if (
-							JSON.stringify(this.allReferencedAssemblies.sort()) !==
-							JSON.stringify(globalMetadata.referencedAssemblies.sort())
-						) {
-							reject();
-							return;
-						}
 						const currentHash = bufToHex(
 							await window.crypto.subtle.digest("SHA-256", metadataNode.data),
 						);
@@ -205,7 +190,7 @@ export class Runtime {
 	): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
 		// Wait for the Il2Cpp metadata to be resolved before continuing
 		await waitFor(() => this.globalMetadata);
-		if (this.globalMetadata?.imageDefs.length === 0)
+		if (this.globalMetadata?.images.length === 0)
 			return this.instantiateStreaming(source, importObject);
 
 		let response: Response;
@@ -350,21 +335,6 @@ export class Runtime {
 		this.logger.message("Chainloader startup complete");
 
 		return instantiatedSource;
-	}
-
-	private searchWasmBinary(bufferSource: ArrayBuffer) {
-		if (!this.globalMetadata) return;
-		const il2CppContext = createIl2CppContext(
-			bufferSource,
-			this.globalMetadata,
-			this.allReferencedAssemblies,
-		);
-		if (il2CppContext.isErr()) {
-			this.logger.error(il2CppContext.error.print());
-			return;
-		}
-		this.il2CppContext = il2CppContext.value;
-		this.saveIl2CppContext();
 	}
 
 	/// Resolve Il2Cpp function indices by searching WASM function bodies for byte patterns.

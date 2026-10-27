@@ -29,12 +29,12 @@ export class WebData {
       this.nodes.push(node);
     }
     for (const node of this.nodes) {
-      node.data = reader.readSlice(node.offset, node.size);
+      node.data = reader.readSlice(node.offset, node.size) as ArrayBuffer;
     }
     this.resolveUnityVersion(reader);
   }
 
-  public getNode(name: string) {
+  public getNode(name: string): WebDataNode | undefined {
     return this.nodes.find((n) => n.name === name);
   }
 

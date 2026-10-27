@@ -11,4 +11,5 @@ export default defineConfig({
 		DEVELOPMENT: "true",
 		VERSION: JSON.stringify(version),
 	},
+	sourcemap: true
 });

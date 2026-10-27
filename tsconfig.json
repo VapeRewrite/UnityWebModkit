@@ -3,7 +3,7 @@
 		"lib": ["ESNext", "DOM"],
 		"module": "ESNext",
 		"target": "ESNext",
-		"types": ["rolldown-plugin-wasm/types"],
+		"types": ["@vape-rewrite/rolldown-plugin-wasm/types"],
 		"moduleResolution": "bundler",
 		"sourceMap": true,
 		"declarationMap": true,
