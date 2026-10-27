@@ -2,8 +2,8 @@
   "name": "@vape-rewrite/unity-web-modkit",
   "version": "0.0.0",
   "description": "",
-  "main": "./dist/mod.js",
-  "types": "./lib/mod.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "scripts": {
     "build": "bunx --bun tsdown",
     "dev": "bunx --bun tsdown -w"
