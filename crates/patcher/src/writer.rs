@@ -1,4 +1,12 @@
-use crate::models::*;
+use wasm_bindgen::prelude::wasm_bindgen;
+
+/// Write a varuint32 to a buffer
+/// Takes ownership and returns the buffer so wasm-bindgen doesn't goobener
+#[wasm_bindgen(js_name = "write_var_uint32_to_buffer")]
+pub fn write_var_uint32_to_buffer_w(mut buffer: Vec<u8>, value: u32) -> Vec<u8> {
+	write_var_uint32_to_buffer(&mut buffer, value);
+	buffer
+}
 
 /// Write a varuint32 to a buffer
 pub fn write_var_uint32_to_buffer(buffer: &mut Vec<u8>, value: u32) {

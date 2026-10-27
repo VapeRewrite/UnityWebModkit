@@ -4,7 +4,7 @@ description = "Parses IL2CPP WASM binaries"
 version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0"
-repository = ""
+repository = "https://codeberg.org/VapeRewrite/UnityWebModkit.git"
 
 [lib]
 crate-type = ["cdylib"]

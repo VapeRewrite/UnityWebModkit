@@ -1,6 +1,9 @@
+use wasm_bindgen::prelude::wasm_bindgen;
+
 use crate::models::*;
 
 /// Parse a WASM binary and extract all sections
+#[wasm_bindgen]
 pub fn parse_wasm_binary(data: &[u8]) -> Result<WasmParseResult, String> {
 	if data.len() < 8 {
 		return Err("WASM binary too short".to_string());
@@ -226,7 +229,7 @@ pub fn parse_wasm_binary(data: &[u8]) -> Result<WasmParseResult, String> {
 	}
 
 	Ok(WasmParseResult {
-		types,
+		t: types,
 		imports,
 		functions,
 		tables,
@@ -234,7 +237,6 @@ pub fn parse_wasm_binary(data: &[u8]) -> Result<WasmParseResult, String> {
 		globals,
 		exports,
 		function_codes,
-		original_data: data.to_vec(),
 	})
 }
 

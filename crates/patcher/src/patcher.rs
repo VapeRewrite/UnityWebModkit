@@ -1,3 +1,5 @@
+use wasm_bindgen::prelude::wasm_bindgen;
+
 use crate::models::*;
 use crate::parser::read_var_uint32;
 use crate::writer::write_var_uint32_to_buffer;
@@ -6,11 +8,19 @@ use std::collections::HashMap;
 // Remove the duplicate constants and functions from lib.rs
 // This file contains the patching logic that was originally in lib.rs
 
+#[derive(Debug, Clone, Copy)]
+#[wasm_bindgen]
+pub struct IndexMap {
+	pub old_idx: u32,
+	pub new_idx: u32
+}
+
 /// Apply OP_CALL patching to a WASM binary
 ///
 /// This function takes a WASM binary and a mapping of old function indices to new ones,
 /// and returns a new WASM binary with the function calls patched.
-pub fn patch_calls_in_wasm(data: &[u8], func_index_map: &[(u32, u32)]) -> Result<Vec<u8>, String> {
+#[wasm_bindgen]
+pub fn patch_calls_in_wasm(data: &[u8], func_index_map: Vec<IndexMap>) -> Result<Vec<u8>, String> {
 	if data.len() < 8 {
 		return Err("WASM binary too short".to_string());
 	}
@@ -23,8 +33,8 @@ pub fn patch_calls_in_wasm(data: &[u8], func_index_map: &[(u32, u32)]) -> Result
 
 	// Build a lookup map: old_index -> new_index
 	let mut index_map: HashMap<u32, u32> = HashMap::new();
-	for (old_idx, new_idx) in func_index_map {
-		index_map.insert(*old_idx, *new_idx);
+	for IndexMap { old_idx, new_idx } in func_index_map {
+		index_map.insert(old_idx, new_idx);
 	}
 
 	// Build the patched binary
@@ -110,7 +120,7 @@ pub fn patch_calls_in_wasm(data: &[u8], func_index_map: &[(u32, u32)]) -> Result
 								// Patch the call target
 								// We need to write the new varuint32 in place
 								let mut write_offset = target_start;
-								let mut value = new_idx;
+								let value = new_idx;
 
 								if value == 0 {
 									result[write_offset] = 0;
@@ -173,30 +183,6 @@ pub fn patch_calls_in_wasm(data: &[u8], func_index_map: &[(u32, u32)]) -> Result
 	}
 
 	Ok(result)
-}
-
-/// Patch WASM function calls for streaming instantiation
-///
-/// This is the core function that mirrors the JavaScript runtime's
-/// `onWebAssemblyInstantiateStreaming` and `handleBuffer` methods.
-pub fn patch_wasm_for_streaming(
-	buffer: &[u8],
-	func_index_map: &[(u32, u32)],
-	import_object_size: u32,
-) -> Result<Vec<u8>, String> {
-	// First, apply the function index mapping with offset adjustment
-	let mut adjusted_map: Vec<(u32, u32)> = func_index_map
-		.iter()
-		.map(|(old, new)| {
-			// Adjust the new index by the import object size
-			// This mirrors the JavaScript: `il2CppStringNew.preservedIndex + importObjectSize`
-			let adjusted_new = new.wrapping_add(import_object_size);
-			(*old, adjusted_new)
-		})
-		.collect();
-
-	// Apply the patching
-	patch_calls_in_wasm(buffer, &adjusted_map)
 }
 
 /// Create a WASM instruction patch for OP_CALL

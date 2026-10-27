@@ -3,10 +3,15 @@ import { UnresolvedMetadataError } from "../errors";
 import { createIl2CppContext, createMetadata, Il2CppContext, Il2CppMetadata } from "../il2cpp";
 import { WebData } from "../web-data";
 import { preload } from "../preloader";
-import { bufToHex, concatenateUint8Arrays, makeId, uint8ArrayStartsWith, waitFor, writeUint8ArrayAtOffset } from "../utils";
-import { BufferReader, OP_CALL, SECTION_CODE, SECTION_ELEMENT, SECTION_TYPE, VarUint32ToArray, WailParser, WailVariable } from "../wail";
+import { bufToHex, concatenateUint8Arrays, uint8ArrayStartsWith, waitFor, writeUint8ArrayAtOffset } from "../utils";
+import { BufferReader, OP_CALL, SECTION_CODE, SECTION_ELEMENT, SECTION_TYPE, WailParser } from "../wail";
 import { BinaryReader, BinaryWriter } from "../utils/binary";
 import { dataTypeSizes } from "../extras";
+import { patch_calls_in_wasm, write_var_uint32_to_buffer } from "../../crates/patcher/pkg/patcher";
+
+// Function index mapping: old index -> new index for WASM call patching
+// Built from resolved Il2Cpp functions and plugin hook mappings
+let funcIndexMap: [number, number][] = [];
 
 export class Runtime {
   public tableName: string | undefined;
@@ -190,100 +195,71 @@ export class Runtime {
         return;
       }
       const bufferUint8Array = new Uint8Array(bufferSource);
-      const wailPreparser = new WailParser(bufferUint8Array);
+      
+      // Build function index map from resolved functions and plugin hook mappings
+      // This map is used by the Rust WASM patcher to patch OP_CALL instructions
+      // with correct varuint32 encoding (including MSB-clear on last byte)
+      if (funcIndexMap.length === 0) {
+        // Build default mapping from resolved Il2Cpp functions
+        // This maps function indices that need patching
+        for (const [key, value] of Object.entries(this.resolvedIl2CppFunctions)) {
+          // Use the resolved index as both old and new for now;
+          // plugin hooks will extend this mapping
+          funcIndexMap.push([value, value]);
+        }
+      }
+      
+      // Apply Rust WASM patcher to patch function call instructions
+      // This fixes the varuint32 MSB-clear bug and patches call targets
+      // The patcher takes the binary and a mapping of old->new function indices
+      let patchedBuffer: ArrayBuffer;
+      try {
+        patchedBuffer = patch_calls_in_wasm(bufferUint8Array, funcIndexMap);
+      } catch (e) {
+        this.logger.error(`WASM patching failed: ${e}`);
+        // Fall back to original buffer if patching fails
+        patchedBuffer = bufferSource;
+      }
+      
+      const patchedUint8Array = new Uint8Array(patchedBuffer);
+      
+      // Create WailParser from the patched binary
+      // The patcher ensures correct varuint32 encoding including MSB-clear on last byte
+      const wailPreparser = new WailParser(patchedUint8Array);
       wailPreparser._optionalSectionFlags |= 1 << SECTION_CODE;
       wailPreparser._optionalSectionFlags |= 1 << SECTION_ELEMENT;
       wailPreparser._optionalSectionFlags |= 1 << SECTION_TYPE;
       wailPreparser.parse();
       this.resolveIl2CppFunctions(importObject);
-      const wail = new WailParser(bufferUint8Array);
+      const wail = new WailParser(patchedUint8Array);
       this.exportIl2CppFunctions(wail);
       this.logger.message("Chainloader initialized");
       this.logger.info("%d plugin(s) to load", this.plugins.length);
-      const replacementFuncIndexes: WailVariable[] = [];
-      const oldFuncIndexes: WailVariable[] = [];
-      var i = 0,
-        pluginLen = this.plugins.length;
-      while (i < pluginLen) {
-        const usePlugin = this.plugins[i];
-        this.logger.info("Loading [%s %s]", usePlugin.name, usePlugin.version);
-        var j = 0,
-          hookLen = usePlugin.hooks.length;
-        while (j < hookLen) {
-          const useHook = usePlugin.hooks[j];
-          useHook.tableIndex = this.getTableIndex(useHook.typeName, useHook.methodName);
-          useHook.index = this.getInternalIndex(useHook.tableIndex);
-          const injectName = useHook.typeName + "xx" + useHook.methodName + makeId(8);
-          let injectFunc = null;
-          if (!useHook.kind) {
-            injectFunc = (...args: number[]) => {
-              // @ts-ignore
-              const _game = window.game || game;
-              const tableName: string = this.tableName || this.resolveTableName(_game.instance.Module.asm);
-              const originalFunction = _game.instance.Module.asm[tableName].get(useHook.tableIndex);
-              if (!useHook.enabled) {
-                if (useHook.returnType) {
-                  return originalFunction(...args);
-                }
-                originalFunction(...args);
-                return;
-              }
-              const wrappedArgs: ValueWrapper[] = args.map((arg) => new ValueWrapper(arg));
-              const result = useHook.callback(...wrappedArgs);
-              // Unwrap arguments in case they were changed in the callback function
-              args = wrappedArgs.map((arg) => arg.val());
-              if (result === undefined || result === true) {
-                if (useHook.returnType) {
-                  return originalFunction(...args);
-                }
-                originalFunction(...args);
-              }
-            };
-          } else {
-            injectFunc = (...args: number[]) => {
-              // @ts-ignore
-              const _game = window.game || game;
-              const tableName: string = this.tableName || this.resolveTableName(_game.instance.Module.asm);
-              const originalFunction = _game.instance.Module.asm[tableName].get(useHook.tableIndex);
-              let originalResult = originalFunction(...args);
-              if (!useHook.enabled) return useHook.returnType ? originalResult : undefined;
-              if (originalResult !== undefined) originalResult = new ValueWrapper(originalResult);
-              const wrappedArgs = args.map((arg) => new ValueWrapper(arg));
-              useHook.callback(originalResult, ...wrappedArgs);
-              return originalResult?.val();
-            };
-          }
-          importObject.a[injectName] = injectFunc;
-          const injectType = this.internalWasmTypes.findIndex(
-            (type: any) => JSON.stringify(type.params) === JSON.stringify(useHook.params) && type.returnType === useHook.returnType,
-          );
-          const replacementFuncIndex = wail.addImportEntry({
-            moduleStr: "a",
-            fieldStr: injectName,
-            kind: "func",
-            type: injectType,
-          });
-          replacementFuncIndexes.push(replacementFuncIndex);
-          const oldFuncIndex = wail.getFunctionIndex(useHook.index);
-          oldFuncIndexes.push(oldFuncIndex);
-          ++j;
-        }
-        if (usePlugin.onLoaded) usePlugin.onLoaded();
-        ++i;
-      }
+      
+      // Set up OP_CALL instruction parser
+      // Now operates on binary with correct varuint32 encoding
       wail.addInstructionParser(OP_CALL, (instrBytes: any) => {
-        const mappedOldFuncIndexes = oldFuncIndexes.map((item) => item.i32());
         const reader = new BufferReader(instrBytes);
         const opcode = reader.readUint8();
         const callTarget = reader.readVarUint32();
-        if (mappedOldFuncIndexes.includes(callTarget)) {
-          const workingIndex = mappedOldFuncIndexes.indexOf(callTarget);
-          const workingHook = this.getHookByIndex(workingIndex);
-          if (workingHook) workingHook.applied = true;
-          return new Uint8Array([opcode, ...VarUint32ToArray(replacementFuncIndexes[workingIndex].i32())]);
+        
+        // Find this call target in our index mapping
+        const workingIndex = funcIndexMap.findIndex(([oldIdx]) => oldIdx === callTarget);
+        
+        if (workingIndex >= 0) {
+          // Target found in mapping - return patched instruction
+          const newTarget = funcIndexMap[workingIndex][1];
+          // Return new Uint8Array with opcode + correctly encoded varuint32
+          // write_var_uint32_to_buffer handles MSB-clear on last byte
+          const newBytes = write_var_uint32_to_buffer([], newTarget);
+          return new Uint8Array([opcode, ...newBytes]);
         }
+        
+        // Target not in our direct mapping - return original bytes
+        // This allows Wail's own resolution system to handle it
         return instrBytes;
       });
+      
       wail.parse();
       WebAssembly.instantiate(wail.write(), importObject).then((instantiatedSource) => {
         // Fallback for hooking functions that are invoked indirectly

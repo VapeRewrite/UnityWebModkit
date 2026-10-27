@@ -44,6 +44,7 @@ pub use crate::models::WasmMemory;
 pub use crate::models::WasmParseResult;
 pub use crate::models::WasmString;
 pub use crate::models::WasmTable;
+pub use crate::patcher::IndexMap;
 
 /// Read a varuint32 from the data at the given offset, advancing the offset
 pub use crate::parser::read_var_uint32;
@@ -164,8 +165,8 @@ mod tests {
 		wasm_binary.push(crate::models::OP_END);
 
 		// Now patch: replace function index 0 -> 5
-		let func_map = [(0, 5)];
-		let patched = patch_calls_in_wasm(&wasm_binary, &func_map);
+		let func_map = vec![IndexMap { old_idx: 0, new_idx: 5 }];
+		let patched = patch_calls_in_wasm(&wasm_binary, func_map);
 
 		match patched {
 			Ok(data) => {

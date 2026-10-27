@@ -1,3 +1,6 @@
+use js_sys::{Array, Uint8Array};
+use wasm_bindgen::prelude::wasm_bindgen;
+
 /// WebAssembly binary patcher that can patch function calls in WASM binaries
 /// while they are streaming in or have been fully loaded.
 ///
@@ -216,10 +219,12 @@ pub const VALUE_TYPE_BLOCK: u8 = 0x40;
 
 // A parsed WASM function entry with its type index and code
 #[derive(Debug, Clone)]
+#[wasm_bindgen]
 pub struct WasmFunction {
 	/// Index into the type section
 	pub type_index: u32,
 	/// Raw code bytes (locals + body)
+	#[wasm_bindgen(getter_with_clone)]
 	pub code: Vec<u8>,
 	/// Number of local declarations
 	pub num_locals: u32,
@@ -229,10 +234,13 @@ pub struct WasmFunction {
 
 /// A parsed WASM import entry
 #[derive(Debug, Clone)]
+#[wasm_bindgen]
 pub struct WasmImport {
+	#[wasm_bindgen(getter_with_clone)]
 	/// Module name
 	pub module: String,
 	/// Field/field name
+	#[wasm_bindgen(getter_with_clone)]
 	pub field: String,
 	/// Kind (0=func, 1=table, 2=memory, 3=global)
 	pub kind: u8,
@@ -242,15 +250,18 @@ pub struct WasmImport {
 
 /// A parsed WASM export entry
 #[derive(Debug, Clone)]
+#[wasm_bindgen]
 pub struct WasmExport {
 	/// Field/field name
+	#[wasm_bindgen(getter_with_clone)]
 	pub field: String,
 	/// Index
 	pub index: u32,
 }
 
 /// A parsed WASM table entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
+#[wasm_bindgen]
 pub struct WasmTable {
 	/// Minimum initial element count
 	pub minimum: u32,
@@ -261,7 +272,8 @@ pub struct WasmTable {
 }
 
 /// A parsed WASM memory entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
+#[wasm_bindgen]
 pub struct WasmMemory {
 	/// Minimum initial page count
 	pub minimum: u32,
@@ -270,7 +282,8 @@ pub struct WasmMemory {
 }
 
 /// A parsed WASM global entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
+#[wasm_bindgen]
 pub struct WasmGlobal {
 	/// Value type (i32, f32, etc.)
 	pub value_type: u8,
@@ -279,26 +292,50 @@ pub struct WasmGlobal {
 }
 
 /// Result of parsing a WASM binary
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+#[wasm_bindgen]
 pub struct WasmParseResult {
 	/// Parsed type section entries
-	pub types: Vec<Vec<u8>>, // Each entry is (params, results) flattened
+	#[wasm_bindgen(skip)]
+	pub t: Vec<Vec<u8>>, // Each entry is (params, results) flattened
 	/// Parsed import entries
+	#[wasm_bindgen(getter_with_clone)]
 	pub imports: Vec<WasmImport>,
 	/// Parsed function entries (type indices)
+	#[wasm_bindgen(getter_with_clone)]
 	pub functions: Vec<u32>,
 	/// Parsed table entries
+	#[wasm_bindgen(getter_with_clone)]
 	pub tables: Vec<WasmTable>,
 	/// Parsed memory entries
+	#[wasm_bindgen(getter_with_clone)]
 	pub memories: Vec<WasmMemory>,
 	/// Parsed global entries
+	#[wasm_bindgen(getter_with_clone)]
 	pub globals: Vec<WasmGlobal>,
 	/// Parsed export entries
+	#[wasm_bindgen(getter_with_clone)]
 	pub exports: Vec<WasmExport>,
 	/// Parsed function code entries
+	#[wasm_bindgen(getter_with_clone)]
 	pub function_codes: Vec<WasmFunction>,
-	/// Original binary data (for reference)
-	pub original_data: Vec<u8>,
+}
+
+#[wasm_bindgen]
+impl WasmParseResult {
+	#[wasm_bindgen(getter)]
+	#[wasm_bindgen(unchecked_return_type = "Uint8Array[]")]
+	pub fn types(&self) -> Array<Uint8Array> {
+		let l =self.t.len() as u32;
+		let outer = Array::<Uint8Array>::new_with_length_typed(l);
+
+		for bytes in &self.t {
+			let inner = Uint8Array::new_from_slice(bytes.as_slice());
+			outer.push(&inner);
+		}
+
+		outer
+	}
 }
 
 /// A parsed modified UTF-8 string from the WASM binary
