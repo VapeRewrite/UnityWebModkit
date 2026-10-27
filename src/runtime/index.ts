@@ -3,7 +3,7 @@ import { UnresolvedMetadataError } from "../errors";
 import { createMetadata, Il2CppContext, Il2CppMetadata } from "../il2cpp";
 import { WebData } from "../web-data";
 import { preload } from "../preloader";
-import { bufToHex, waitFor, writeUint8ArrayAtOffset } from "../utils";
+import { waitFor, writeUint8ArrayAtOffset } from "../utils";
 import { BinaryReader, BinaryWriter } from "../utils/binary";
 import { dataTypeSizes } from "../extras";
 import { patch_wasm_complete, find_function_by_pattern } from "../../crates/patcher/pkg/patcher";
