@@ -6,6 +6,6 @@ export default function createProxy<T extends object>(target: T, handler: ProxyH
 			// to a separate thisArg
 			const orig = (handler.get ?? Reflect.get)(target, p, receiver);
 			return typeof orig === "function" && p !== "prototype" ? orig.bind(target) : orig;
-		}
+		},
 	});
 }

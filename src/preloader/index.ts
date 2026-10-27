@@ -78,12 +78,12 @@ async function fallbackInterceptFetch(): Promise<WebData> {
 		const originalFetch = window.fetch;
 		window.fetch = createProxy(originalFetch, {
 			async apply(target, thisArg, argArray: [input: RequestInfo | URL, init?: RequestInit]) {
-        const [url] = argArray;
+				const [url] = argArray;
 				logger.debug(url);
 				if (typeof url === "string" && (url as string).includes(".data.br")) {
 					window.fetch = originalFetch;
 					const response = Reflect.apply(target, thisArg, argArray);
-					resolve(parseWebData(await response.then(x => x.clone().arrayBuffer())));
+					resolve(parseWebData(await response.then((x) => x.clone().arrayBuffer())));
 					return response;
 				}
 				return Reflect.apply(target, thisArg, argArray);
