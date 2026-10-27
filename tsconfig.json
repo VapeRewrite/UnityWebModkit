@@ -2,12 +2,12 @@
 	"compilerOptions": {
 		"module": "ESNext",
 		"target": "ESNext",
+		"types": ["rolldown-plugin-wasm/types"],
 		"moduleResolution": "bundler",
 		"sourceMap": true,
 		"declarationMap": true,
 		"declaration": true,
 		"strict": true,
-		"allowJs": true,
 		"rootDir": "src",
 		"isolatedDeclarations": true
 	},

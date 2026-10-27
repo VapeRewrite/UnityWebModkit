@@ -165,8 +165,9 @@ mod tests {
 		wasm_binary.push(crate::models::OP_END);
 
 		// Now patch: replace function index 0 -> 5
-		let func_map = vec![IndexMap { old_idx: 0, new_idx: 5 }];
-		let patched = patch_calls_in_wasm(&wasm_binary, func_map);
+		let old_indices = vec![0u32];
+		let new_indices = vec![5u32];
+		let patched = patch_calls_in_wasm(&wasm_binary, old_indices, new_indices);
 
 		match patched {
 			Ok(data) => {

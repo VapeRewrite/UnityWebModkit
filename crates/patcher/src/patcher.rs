@@ -17,10 +17,10 @@ pub struct IndexMap {
 
 /// Apply OP_CALL patching to a WASM binary
 ///
-/// This function takes a WASM binary and a mapping of old function indices to new ones,
+/// This function takes a WASM binary and parallel arrays of old and new function indices,
 /// and returns a new WASM binary with the function calls patched.
 #[wasm_bindgen]
-pub fn patch_calls_in_wasm(data: &[u8], func_index_map: Vec<IndexMap>) -> Result<Vec<u8>, String> {
+pub fn patch_calls_in_wasm(data: &[u8], old_indices: Vec<u32>, new_indices: Vec<u32>) -> Result<Vec<u8>, String> {
 	if data.len() < 8 {
 		return Err("WASM binary too short".to_string());
 	}
@@ -33,8 +33,8 @@ pub fn patch_calls_in_wasm(data: &[u8], func_index_map: Vec<IndexMap>) -> Result
 
 	// Build a lookup map: old_index -> new_index
 	let mut index_map: HashMap<u32, u32> = HashMap::new();
-	for IndexMap { old_idx, new_idx } in func_index_map {
-		index_map.insert(old_idx, new_idx);
+	for i in 0..old_indices.len().min(new_indices.len()) {
+		index_map.insert(old_indices[i], new_indices[i]);
 	}
 
 	// Build the patched binary
@@ -203,4 +203,18 @@ pub fn make_call_patch(old_index: u32, new_index: u32) -> (Vec<u8>, Vec<u8>) {
 	write_var_uint32_to_buffer(&mut replacement, new_index);
 
 	(pattern, replacement)
+}
+
+/// Patch a WASM binary for streaming instantiation.
+///
+/// This function is designed to be used with `WebAssembly.instantiateStreaming`.
+/// It takes the full WASM binary data and parallel arrays of old and new function indices,
+/// and returns a new WASM binary with the function calls patched.
+///
+/// This is the streaming variant of `patch_calls_in_wasm` - it accepts the same parameters
+/// but is intended to be called on accumulated stream chunks rather than the full response
+/// up front.
+#[wasm_bindgen]
+pub fn patch_wasm_for_streaming(data: &[u8], old_indices: Vec<u32>, new_indices: Vec<u32>) -> Result<Vec<u8>, String> {
+	patch_calls_in_wasm(data, old_indices, new_indices)
 }

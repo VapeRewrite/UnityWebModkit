@@ -7,7 +7,7 @@ import { bufToHex, concatenateUint8Arrays, uint8ArrayStartsWith, waitFor, writeU
 import { BufferReader, OP_CALL, SECTION_CODE, SECTION_ELEMENT, SECTION_TYPE, WailParser } from "../wail";
 import { BinaryReader, BinaryWriter } from "../utils/binary";
 import { dataTypeSizes } from "../extras";
-import { patch_calls_in_wasm, write_var_uint32_to_buffer } from "../../crates/patcher/pkg/patcher";
+import { patch_wasm_for_streaming, write_var_uint32_to_buffer } from "../../crates/patcher/pkg/patcher";
 
 // Function index mapping: old index -> new index for WASM call patching
 // Built from resolved Il2Cpp functions and plugin hook mappings
@@ -47,9 +47,11 @@ export class Runtime {
     this.hookWasmInstantiate();
     const webData = await preload();
     this.logger.debug("Parsed web data into %d node(s)", webData.nodes.length);
-    webData.unityVersion
-      ? this.logger.info("Running under Unity %s", webData.unityVersion)
-      : this.logger.warn("Unable to determine Unity version from web data!");
+    if (webData.unityVersion) {
+      this.logger.info("Running under Unity %s", webData.unityVersion)
+    } else {
+      this.logger.warn("Unable to determine Unity version from web data!");
+    }
     this.readGlobalMetadataFromStorage(webData).catch(() => {
       window.indexedDB.deleteDatabase("UnityWebModkit");
       this.loadGlobalMetadata(webData);
@@ -170,158 +172,170 @@ export class Runtime {
     // Wait for the Il2Cpp metadata to be resolved before continuing
     await waitFor(() => this.globalMetadata);
     if (this.globalMetadata?.imageDefs.length === 0) return this.instantiateStreaming(source, importObject);
-    let bufferSource: ArrayBuffer;
+
+    let response: Response;
     if (source instanceof Promise) {
-      bufferSource = await source.then((res) => res.arrayBuffer());
+      response = await source;
     } else if (source instanceof Response) {
-      bufferSource = await source.arrayBuffer();
+      response = source;
     } else {
       this.logger.error("TypeError: Got an unexpected object type as the first argument to WebAssembly.instantiateStreaming");
       return Promise.reject();
     }
-    return this.handleBuffer(bufferSource, importObject);
-  }
 
-  private handleBuffer(
-    bufferSource: ArrayBuffer,
-    importObject?: WebAssembly.Imports | undefined,
-  ): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
-    return new Promise<WebAssembly.WebAssemblyInstantiatedSource>(async (resolve, reject) => {
-      if (!importObject) importObject = {};
-      await this.readIl2CppContextFromStorage();
-      if (!this.il2CppContext) this.searchWasmBinary(bufferSource);
-      if (!this.il2CppContext) {
-        reject();
-        return;
-      }
-      const bufferUint8Array = new Uint8Array(bufferSource);
-      
-      // Build function index map from resolved functions and plugin hook mappings
-      // This map is used by the Rust WASM patcher to patch OP_CALL instructions
-      // with correct varuint32 encoding (including MSB-clear on last byte)
-      if (funcIndexMap.length === 0) {
-        // Build default mapping from resolved Il2Cpp functions
-        // This maps function indices that need patching
-        for (const [key, value] of Object.entries(this.resolvedIl2CppFunctions)) {
-          // Use the resolved index as both old and new for now;
-          // plugin hooks will extend this mapping
-          funcIndexMap.push([value, value]);
-        }
-      }
-      
-      // Apply Rust WASM patcher to patch function call instructions
-      // This fixes the varuint32 MSB-clear bug and patches call targets
-      // The patcher takes the binary and a mapping of old->new function indices
-      let patchedBuffer: ArrayBuffer;
-      try {
-        patchedBuffer = patch_calls_in_wasm(bufferUint8Array, funcIndexMap);
-      } catch (e) {
-        this.logger.error(`WASM patching failed: ${e}`);
-        // Fall back to original buffer if patching fails
-        patchedBuffer = bufferSource;
-      }
-      
-      const patchedUint8Array = new Uint8Array(patchedBuffer);
-      
-      // Create WailParser from the patched binary
-      // The patcher ensures correct varuint32 encoding including MSB-clear on last byte
-      const wailPreparser = new WailParser(patchedUint8Array);
-      wailPreparser._optionalSectionFlags |= 1 << SECTION_CODE;
-      wailPreparser._optionalSectionFlags |= 1 << SECTION_ELEMENT;
-      wailPreparser._optionalSectionFlags |= 1 << SECTION_TYPE;
-      wailPreparser.parse();
-      this.resolveIl2CppFunctions(importObject);
-      const wail = new WailParser(patchedUint8Array);
-      this.exportIl2CppFunctions(wail);
-      this.logger.message("Chainloader initialized");
-      this.logger.info("%d plugin(s) to load", this.plugins.length);
-      
-      // Set up OP_CALL instruction parser
-      // Now operates on binary with correct varuint32 encoding
-      wail.addInstructionParser(OP_CALL, (instrBytes: any) => {
-        const reader = new BufferReader(instrBytes);
-        const opcode = reader.readUint8();
-        const callTarget = reader.readVarUint32();
-        
-        // Find this call target in our index mapping
-        const workingIndex = funcIndexMap.findIndex(([oldIdx]) => oldIdx === callTarget);
-        
-        if (workingIndex >= 0) {
-          // Target found in mapping - return patched instruction
-          const newTarget = funcIndexMap[workingIndex][1];
-          // Return new Uint8Array with opcode + correctly encoded varuint32
-          // write_var_uint32_to_buffer handles MSB-clear on last byte
-          const newBytes = write_var_uint32_to_buffer([], newTarget);
-          return new Uint8Array([opcode, ...newBytes]);
-        }
-        
-        // Target not in our direct mapping - return original bytes
-        // This allows Wail's own resolution system to handle it
-        return instrBytes;
-      });
-      
-      wail.parse();
-      WebAssembly.instantiate(wail.write(), importObject).then((instantiatedSource) => {
-        // Fallback for hooking functions that are invoked indirectly
-        const unappliedHooks = this.getUnappliedHooks();
-        const tableName: string = this.tableName || this.resolveTableName((instantiatedSource as any).instance.exports);
-        unappliedHooks.forEach((hook) => {
-          // @ts-ignore
-          var originalFunc = (instantiatedSource as any).instance.exports[tableName].get(hook.tableIndex);
-          const hookResults = hook.returnType ? [hook.returnType] : [];
-          let injectFunc = null;
-          if (!hook.kind) {
-            // @ts-ignore
-            injectFunc = new WebAssembly.Function(
-              {
-                parameters: hook.params,
-                results: hookResults,
-              },
-              (...args: number[]) => {
-                if (!hook.enabled) {
-                  if (hook.returnType) {
-                    return originalFunc(...args);
-                  }
-                  originalFunc(...args);
-                  return;
-                }
-                const wrappedArgs = args.map((arg) => new ValueWrapper(arg));
-                const result = hook.callback(...wrappedArgs);
-                // Unwrap arguments in case they were changed in the callback function
-                args = wrappedArgs.map((arg) => arg.val());
-                if (result === undefined || result === true) {
-                  if (hook.returnType) {
-                    return originalFunc(...args);
-                  }
-                  originalFunc(...args);
-                }
-              },
-            );
-          } else {
-            // @ts-ignore
-            injectFunc = new WebAssembly.Function(
-              {
-                parameters: hook.params,
-                results: hookResults,
-              },
-              (...args: number[]) => {
-                let originalResult = originalFunc(...args);
-                if (!hook.enabled) return hook.returnType ? originalResult : undefined;
-                if (originalResult !== undefined) originalResult = new ValueWrapper(originalResult);
-                const wrappedArgs = args.map((arg) => new ValueWrapper(arg));
-                hook.callback(originalResult, ...wrappedArgs);
-                return originalResult?.val();
-              },
-            );
-          }
-          // @ts-ignore
-          instantiatedSource.instance.exports[tableName].set(hook.tableIndex, injectFunc);
-          hook.applied = true;
-        });
-        this.logger.message("Chainloader startup complete");
-        resolve(instantiatedSource);
-      });
+    // Build default mapping from resolved Il2Cpp functions
+    // This maps function indices that need patching
+    // (left empty intentionally; plugin hooks will populate funcIndexMap
+    // with real old -> new redirects, skipping identity mappings which
+    // would be a memory waste for the patcher)
+
+    const oldIndices = new Uint32Array(funcIndexMap.map(([old]) => old));
+    const newIndices = new Uint32Array(funcIndexMap.map(([,new_]) => new_));
+
+    // Read chunks from the response body stream instead of buffering with arrayBuffer()
+    // This allows the patcher to work on streamed data rather than waiting for the full response
+    const chunks: Uint8Array[] = [];
+    const reader = response.body?.getReader();
+    if (!reader) {
+      this.logger.error("No readable body in WASM response");
+      return this.instantiateStreaming(response, importObject);
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+
+    // Concatenate all chunks into a single buffer
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const fullBytes = new Uint8Array(totalLength);
+    let byteOffset = 0;
+    for (const chunk of chunks) {
+      fullBytes.set(chunk, byteOffset);
+      byteOffset += chunk.length;
+    }
+
+    // Apply streaming patch to the accumulated bytes using patch_wasm_for_streaming
+    // This fixes the varuint32 MSB-clear bug and patches call targets
+    let patchedBytes: Uint8Array;
+    try {
+      patchedBytes = patch_wasm_for_streaming(fullBytes, oldIndices, newIndices);
+    } catch (e) {
+      this.logger.error(`WASM streaming patch failed: ${e}`);
+      patchedBytes = fullBytes;
+    }
+
+    // Create a new Response with the patched bytes for WebAssembly.instantiateStreaming
+    const patchedResponse = new Response(patchedBytes as unknown as BodyInit, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
     });
+
+    // Use WebAssembly.instantiateStreaming with the patched response
+    // This enables streaming instantiation instead of waiting for the full buffer
+    const instantiatedSource = await WebAssembly.instantiateStreaming(patchedResponse, importObject);
+
+    // Also create WailParser from the patched bytes for function index resolution
+    const bufferUint8Array = patchedBytes;
+
+    const wailPreparser = new WailParser(bufferUint8Array);
+    wailPreparser._optionalSectionFlags |= 1 << SECTION_CODE;
+    wailPreparser._optionalSectionFlags |= 1 << SECTION_ELEMENT;
+    wailPreparser._optionalSectionFlags |= 1 << SECTION_TYPE;
+    wailPreparser.parse();
+    this.resolveIl2CppFunctions(importObject!);
+    const wail = new WailParser(bufferUint8Array);
+    this.exportIl2CppFunctions(wail);
+    this.logger.message("Chainloader initialized");
+    this.logger.info("%d plugin(s) to load", this.plugins.length);
+
+    // Set up OP_CALL instruction parser
+    // Now operates on binary with correct varuint32 encoding
+    wail.addInstructionParser(OP_CALL, (instrBytes: any) => {
+      const reader = new BufferReader(instrBytes);
+      const opcode = reader.readUint8();
+      const callTarget = reader.readVarUint32();
+
+      // Find this call target in our index mapping
+      const workingIndex = funcIndexMap.findIndex(([oldIdx]) => oldIdx === callTarget);
+
+      if (workingIndex >= 0) {
+        // Target found in mapping - return patched instruction
+        const newTarget = funcIndexMap[workingIndex][1];
+        // Return new Uint8Array with opcode + correctly encoded varuint32
+        // write_var_uint32_to_buffer handles MSB-clear on last byte
+        const newBytes = write_var_uint32_to_buffer(new Uint8Array(), newTarget);
+        return new Uint8Array([opcode, ...newBytes]);
+      }
+
+      // Target not in our direct mapping - return original bytes
+      // This allows Wail's own resolution system to handle it
+      return instrBytes;
+    });
+
+    wail.parse();
+
+    // Fallback for hooking functions that are invoked indirectly
+    const unappliedHooks = this.getUnappliedHooks();
+    const tableName: string = this.tableName || this.resolveTableName((instantiatedSource as any).instance.exports);
+    unappliedHooks.forEach((hook) => {
+      // @ts-ignore
+      var originalFunc = (instantiatedSource as any).instance.exports[tableName].get(hook.tableIndex);
+      const hookResults = hook.returnType ? [hook.returnType] : [];
+      let injectFunc = null;
+      if (!hook.kind) {
+        // @ts-ignore
+        injectFunc = new WebAssembly.Function(
+          {
+            parameters: hook.params,
+            results: hookResults,
+          },
+          (...args: number[]) => {
+            if (!hook.enabled) {
+              if (hook.returnType) {
+                return originalFunc(...args);
+              }
+              originalFunc(...args);
+              return;
+            }
+            const wrappedArgs = args.map((arg) => new ValueWrapper(arg));
+            const result = hook.callback(...wrappedArgs);
+            // Unwrap arguments in case they were changed in the callback function
+            args = wrappedArgs.map((arg) => arg.val());
+            if (result === undefined || result === true) {
+              if (hook.returnType) {
+                return originalFunc(...args);
+              }
+              originalFunc(...args);
+            }
+          },
+        );
+      } else {
+        // @ts-ignore
+        injectFunc = new WebAssembly.Function(
+          {
+            parameters: hook.params,
+            results: hookResults,
+          },
+          (...args: number[]) => {
+            let originalResult = originalFunc(...args);
+            if (!hook.enabled) return hook.returnType ? originalResult : undefined;
+            if (originalResult !== undefined) originalResult = new ValueWrapper(originalResult);
+            const wrappedArgs = args.map((arg) => new ValueWrapper(arg));
+            hook.callback(originalResult, ...wrappedArgs);
+            return originalResult?.val();
+          },
+        );
+      }
+      // @ts-ignore
+      instantiatedSource.instance.exports[tableName].set(hook.tableIndex, injectFunc);
+      hook.applied = true;
+    });
+    this.logger.message("Chainloader startup complete");
+
+    return instantiatedSource;
   }
 
   private searchWasmBinary(bufferSource: ArrayBuffer) {
