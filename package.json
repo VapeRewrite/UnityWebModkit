@@ -11,12 +11,12 @@
   "files": [
     "dist"
   ],
-  "packageManager": "bun@1.4.3",
+  "packageManager": "bun@1.4.4",
   "keywords": [],
   "author": "6x68",
   "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@vape-rewrite/rolldown-plugin-wasm": "^1.0.0",
+    "@vape-rewrite/rolldown-plugin-wasm": "^1.0.1",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "tsdown": "^0.23.1",

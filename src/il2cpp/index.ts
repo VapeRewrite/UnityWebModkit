@@ -1,7 +1,7 @@
 import { ok, err, Result } from "neverthrow";
 import { BinaryReader } from "../utils/binary";
 import { MetadataParsingError } from "../errors";
-import { Metadata, parse_from_bytes } from "./parser";
+import { Metadata, parse_from_bytes } from "../../crates/il2cpp-parser/pkg/il2cpp_parser";
 
 export type Il2CppMetadata = Metadata;
 

@@ -6,7 +6,7 @@ import { preload } from "../preloader";
 import { bufToHex, waitFor, writeUint8ArrayAtOffset } from "../utils";
 import { BinaryReader, BinaryWriter } from "../utils/binary";
 import { dataTypeSizes } from "../extras";
-import { patch_wasm_complete, find_function_by_pattern } from "./patcher.js";
+import { patch_wasm_complete, find_function_by_pattern } from "../../crates/patcher/pkg/patcher";
 
 // Function index mapping: old index -> new index for WASM call patching
 // Built from plugin hook mappings (old -> new redirects)

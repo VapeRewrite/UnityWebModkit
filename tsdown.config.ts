@@ -6,7 +6,7 @@ export default defineConfig({
 	entry: "src/index.ts",
 	target: "esnext",
 	platform: "browser",
-	plugins: [wasm({targetEnv: "auto-inline"})],
+	plugins: [wasm({targetEnv: "auto-inline", forceSync: true})],
 	define: {
 		DEVELOPMENT: "true",
 		VERSION: JSON.stringify(version),
