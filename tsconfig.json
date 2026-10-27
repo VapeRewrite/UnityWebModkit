@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"lib": ["ESNext", "DOM"],
 		"module": "ESNext",
 		"target": "ESNext",
 		"types": ["rolldown-plugin-wasm/types"],
@@ -9,6 +10,7 @@
 		"declaration": true,
 		"strict": true,
 		"rootDir": "src",
+		"allowJs": true,
 		"isolatedDeclarations": true
 	},
 	"exclude": ["tsdown.config.ts", "dist"]

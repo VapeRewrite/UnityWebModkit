@@ -6,7 +6,7 @@ import { preload } from "../preloader";
 import { bufToHex, waitFor, writeUint8ArrayAtOffset } from "../utils";
 import { BinaryReader, BinaryWriter } from "../utils/binary";
 import { dataTypeSizes } from "../extras";
-import init, { patch_wasm_complete, find_function_by_pattern } from "../../crates/patcher/pkg/patcher";
+import { patch_wasm_complete, find_function_by_pattern } from "./patcher.js";
 
 // Function index mapping: old index -> new index for WASM call patching
 // Built from plugin hook mappings (old -> new redirects)
@@ -253,10 +253,11 @@ export class Runtime {
 
 		this.resolveIl2CppFunctions(fullBytes, importObject!);
 
-		const exportIndices: number[] = [];
+		const exportIndices = new Uint32Array(this.resolvedIl2CppFunctions.length);
 		const exportNames: string[] = [];
+    let i = 0;
 		for (const [key, value] of Object.entries(this.resolvedIl2CppFunctions)) {
-			exportIndices.push(value);
+			exportIndices[i++] = value;
 			exportNames.push(key);
 		}
 
@@ -266,7 +267,7 @@ export class Runtime {
 				fullBytes,
 				oldIndices,
 				newIndices,
-				new Uint32Array(exportIndices),
+				exportIndices,
 				exportNames,
 			);
 		} catch (e) {

@@ -16,9 +16,9 @@
   "author": "6x68",
   "license": "AGPL-3.0-only",
   "devDependencies": {
+    "@vape-rewrite/rolldown-plugin-wasm": "^1.0.0",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
-    "rolldown-plugin-wasm": "^0.3.2",
     "tsdown": "^0.23.1",
     "typescript": "^7.0.2"
   },
