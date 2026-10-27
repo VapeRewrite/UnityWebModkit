@@ -31,14 +31,14 @@ export class WebData {
     for (const node of this.nodes) {
       node.data = reader.readSlice(node.offset, node.size) as ArrayBuffer;
     }
-    this.resolveUnityVersion(reader);
+    this.resolveUnityVersion();
   }
 
   public getNode(name: string): WebDataNode | undefined {
     return this.nodes.find((n) => n.name === name);
   }
 
-  private resolveUnityVersion(reader: BinaryReader): void {
+  private resolveUnityVersion(): void {
     const dataUnity3dNode = this.getNode("data.unity3d");
     if (!dataUnity3dNode || !dataUnity3dNode.data) return;
     const dataUnity3dReader = new BinaryReader(dataUnity3dNode.data);
