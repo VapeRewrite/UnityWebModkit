@@ -65,10 +65,7 @@ export class Runtime {
 		} else {
 			this.logger.warn("Unable to determine Unity version from web data!");
 		}
-		this.readGlobalMetadataFromStorage(webData).catch(() => {
-			window.indexedDB.deleteDatabase("UnityWebModkit");
-			this.loadGlobalMetadata(webData);
-		});
+		this.loadGlobalMetadata(webData);
 	}
 
 	private async loadGlobalMetadata(webData: WebData) {
@@ -81,102 +78,12 @@ export class Runtime {
 			);
 			return;
 		}
-		const globalMetadata = await createMetadata(
-			metadataNode.data
-		);
+		const globalMetadata = await createMetadata(metadataNode.data);
 		if (globalMetadata.isErr()) {
 			this.logger.error(globalMetadata.error.print());
 			return;
 		}
 		this.globalMetadata = globalMetadata.value;
-		this.saveGlobalMetadata();
-	}
-
-	private saveGlobalMetadata() {
-		const request = window.indexedDB.open("UnityWebModkit", 2);
-		request.onupgradeneeded = () => {
-			const db = request.result;
-			const objectStore = db.createObjectStore("storage", {
-				keyPath: "name",
-			});
-			objectStore.createIndex("name", "name", { unique: true });
-			objectStore.transaction.oncomplete = () => {
-				const storageObjectStore = db
-					.transaction("storage", "readwrite")
-					.objectStore("storage");
-				storageObjectStore.add(this.globalMetadata);
-			};
-		};
-	}
-
-	private saveIl2CppContext() {
-		const request = window.indexedDB.open("UnityWebModkit", 2);
-		request.onsuccess = () => {
-			const db = request.result;
-			const storageObjectStore = db
-				.transaction("storage", "readwrite")
-				.objectStore("storage");
-			storageObjectStore.add(this.il2CppContext);
-		};
-	}
-
-	private readGlobalMetadataFromStorage(webData: WebData): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
-			indexedDB.databases().then(async (databases) => {
-				const uwmStore = databases.findIndex((d) => d.name === "UnityWebModkit");
-				if (uwmStore == -1) {
-					reject();
-					return;
-				}
-				const request = window.indexedDB.open("UnityWebModkit", 2);
-				request.onsuccess = () => {
-					const transaction = request.result.transaction(["storage"]);
-					const objectStore = transaction.objectStore("storage");
-					const metadataRequest = objectStore.get("metadata");
-					metadataRequest.onsuccess = async () => {
-						const metadataNode = webData.getNode(
-							"Il2CppData/Metadata/global-metadata.dat",
-						);
-						if (!metadataNode || !metadataNode.data) {
-							reject();
-							return;
-						}
-						const globalMetadata = metadataRequest.result;
-						const currentHash = bufToHex(
-							await window.crypto.subtle.digest("SHA-256", metadataNode.data),
-						);
-						if (currentHash !== globalMetadata.integrityHash) {
-							reject();
-							return;
-						}
-						this.globalMetadata = globalMetadata;
-						resolve();
-					};
-				};
-			});
-		});
-	}
-
-	private readIl2CppContextFromStorage(): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
-			indexedDB.databases().then(async (databases) => {
-				const uwmStore = databases.findIndex((d) => d.name === "UnityWebModkit");
-				if (uwmStore == -1) {
-					reject();
-					return;
-				}
-				const request = window.indexedDB.open("UnityWebModkit");
-				request.onsuccess = () => {
-					const transaction = request.result.transaction(["storage"]);
-					const objectStore = transaction.objectStore("storage");
-					const il2CppRequest = objectStore.get("il2cpp");
-					il2CppRequest.onsuccess = async () => {
-						this.il2CppContext = il2CppRequest.result;
-						resolve();
-					};
-				};
-			});
-		});
 	}
 
 	private hookWasmInstantiate() {
@@ -240,7 +147,7 @@ export class Runtime {
 
 		const exportIndices = new Uint32Array(this.resolvedIl2CppFunctions.length);
 		const exportNames: string[] = [];
-    let i = 0;
+		let i = 0;
 		for (const [key, value] of Object.entries(this.resolvedIl2CppFunctions)) {
 			exportIndices[i++] = value;
 			exportNames.push(key);
@@ -462,9 +369,9 @@ class ModkitPlugin {
 	private _hooks: Hook[] = [];
 	private _runtime: Runtime;
 
-  get game(): any {
-    return getGame();
-  }
+	get game(): any {
+		return getGame();
+	}
 
 	constructor(
 		name: string,
@@ -580,7 +487,7 @@ export class ValueWrapper {
 	get game(): any {
 		return getGame();
 	}
-  static get game(): any {
+	static get game(): any {
 		return getGame();
 	}
 
