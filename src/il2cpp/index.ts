@@ -49,14 +49,13 @@ type Il2CppScriptData = {
 export async function createMetadata(
   buffer: ArrayBuffer
 ): Promise<Result<Il2CppMetadata, MetadataParsingError>> {
-  const { metadata } = parse_from_bytes(new Uint8Array(buffer));
-  const reader = new BinaryReader(buffer);
-  const sanity = reader.readUint32();
-  if (sanity !== 0xfab11baf) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
-  const version = reader.readUint32();
-  if (version < 0 || version > 1000) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
-  // TODO: Support more metadata versions
-  if (version !== 31) return err(new MetadataParsingError(`Metadata file supplied is not a supported version [${version}].`));
-  reader.seek(0);
+  { // quick sanity check before calling the WASM for -1% performance boost ig
+    const reader = new BinaryReader(buffer);
+    const sanity = reader.readUint32();
+    if (sanity !== 0xfab11baf) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
+    const version = reader.readUint32();
+    if (version < 0 || version > 1000) return err(new MetadataParsingError("Metadata file supplied is not a valid metadata file."));
+  }
+    const { metadata } = parse_from_bytes(new Uint8Array(buffer));
   return ok(metadata);
 }
