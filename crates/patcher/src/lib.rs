@@ -35,6 +35,12 @@ pub use crate::parser::parse_wasm_binary;
 pub use crate::patcher::make_call_patch;
 /// Apply OP_CALL patching to a WASM binary
 pub use crate::patcher::patch_calls_in_wasm;
+/// Find a function index by searching function bodies for a byte pattern
+pub use crate::patcher::find_function_by_pattern;
+/// Add export entries to a WASM binary
+pub use crate::patcher::add_wasm_exports;
+/// Complete WASM patching: OP_CALL targets + export entries in one pass
+pub use crate::patcher::patch_wasm_complete;
 // Re-export commonly used types
 pub use crate::models::WasmExport;
 pub use crate::models::WasmFunction;
