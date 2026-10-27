@@ -279,10 +279,10 @@ export class Runtime {
 
     // Fallback for hooking functions that are invoked indirectly
     const unappliedHooks = this.getUnappliedHooks();
-    const tableName: string = this.tableName || this.resolveTableName((instantiatedSource as any).instance.exports);
+    const tableName: string = this.tableName || this.resolveTableName(instantiatedSource.instance.exports);
     unappliedHooks.forEach((hook) => {
       // @ts-ignore
-      var originalFunc = (instantiatedSource as any).instance.exports[tableName].get(hook.tableIndex);
+      var originalFunc = instantiatedSource.instance.exports[tableName].get(hook.tableIndex);
       const hookResults = hook.returnType ? [hook.returnType] : [];
       let injectFunc = null;
       if (!hook.kind) {
